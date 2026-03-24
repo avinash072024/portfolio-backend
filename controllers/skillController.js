@@ -5,8 +5,26 @@ const Skill = require('../models/Skill');
 // @access  Public
 const getSkills = async (req, res) => {
   try {
-    const skills = await Skill.find();
-    res.status(200).json({success: true, skills});
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 5;
+    const safePage = page > 0 ? page : 1;
+    const safeLimit = limit > 0 ? limit : 5;
+
+    const total = await Skill.countDocuments();
+    const totalPages = Math.ceil(total / safeLimit) || 1;
+    const skip = (safePage - 1) * safeLimit;
+
+    const skills = await Skill.find().skip(skip).limit(safeLimit);
+
+    res.status(200).json({
+      success: true,
+      page: safePage,
+      limit: safeLimit,
+      total,
+      totalPages,
+      count: skills.length,
+      skills,
+    });
   } catch (error) {
     res.status(500).json({success: false, message: error.message });
   }
