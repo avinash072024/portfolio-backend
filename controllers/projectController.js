@@ -5,8 +5,23 @@ const Project = require('../models/Project');
 // @access  Public
 const getProjects = async (req, res) => {
   try {
-    const projects = await Project.find();
-    res.status(200).json({ success: true, projects });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 5;
+    const skip = (page - 1) * limit;
+
+    const total = await Project.countDocuments();
+    const projects = await Project.find().skip(skip).limit(limit);
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.status(200).json({
+      success: true,
+      page,
+      limit,
+      total,
+      totalPages,
+      count: projects.length,
+      projects,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
