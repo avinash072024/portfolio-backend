@@ -1,32 +1,72 @@
 const Skill = require('../models/Skill');
 
+// // @desc    Get all skills
+// // @route   GET /api/skills
+// // @access  Public
+// const getSkills = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page, 10) || 1;
+//     const limit = parseInt(req.query.limit, 10) || 5;
+//     const safePage = page > 0 ? page : 1;
+//     const safeLimit = limit > 0 ? limit : 5;
+
+//     const total = await Skill.countDocuments();
+//     const totalPages = Math.ceil(total / safeLimit) || 1;
+//     const skip = (safePage - 1) * safeLimit;
+
+//     const skills = await Skill.find().skip(skip).limit(safeLimit);
+
+//     res.status(200).json({
+//       success: true,
+//       page: safePage,
+//       limit: safeLimit,
+//       total,
+//       totalPages,
+//       count: skills.length,
+//       skills,
+//     });
+//   } catch (error) {
+//     res.status(500).json({success: false, message: error.message });
+//   }
+// };
+
+
 // @desc    Get all skills
 // @route   GET /api/skills
 // @access  Public
 const getSkills = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 5;
-    const safePage = page > 0 ? page : 1;
-    const safeLimit = limit > 0 ? limit : 5;
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+
+    // If no pagination params → return all
+    if (!page || !limit) {
+      const skills = await Skill.find();
+      return res.status(200).json({
+        success: true,
+        count: skills.length,
+        skills
+      });
+    }
+
+    // With pagination  
+    const skip = (page - 1) * limit;
 
     const total = await Skill.countDocuments();
-    const totalPages = Math.ceil(total / safeLimit) || 1;
-    const skip = (safePage - 1) * safeLimit;
-
-    const skills = await Skill.find().skip(skip).limit(safeLimit);
+    const skills = await Skill.find().skip(skip).limit(limit);
 
     res.status(200).json({
       success: true,
-      page: safePage,
-      limit: safeLimit,
+      page,
+      limit,
       total,
-      totalPages,
+      totalPages: Math.ceil(total / limit),
       count: skills.length,
       skills,
     });
+
   } catch (error) {
-    res.status(500).json({success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
