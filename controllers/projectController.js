@@ -3,25 +3,61 @@ const Project = require('../models/Project');
 // @desc    Get all projects
 // @route   GET /api/projects
 // @access  Public
+// const getProjects = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page, 10) || 1;
+//     const limit = parseInt(req.query.limit, 10) || 5;
+//     const skip = (page - 1) * limit;
+
+//     const total = await Project.countDocuments();
+//     const projects = await Project.find().skip(skip).limit(limit);
+//     const totalPages = Math.ceil(total / limit) || 1;
+
+//     res.status(200).json({
+//       success: true,
+//       page,
+//       limit,
+//       total,
+//       totalPages,
+//       count: projects.length,
+//       projects,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 const getProjects = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 5;
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+
+    // If no pagination params → return all
+    if (!page || !limit) {
+      const projects = await Project.find();
+      return res.status(200).json({
+        success: true,
+        count: projects.length,
+        projects,
+      });
+    }
+
+    // With pagination
     const skip = (page - 1) * limit;
 
     const total = await Project.countDocuments();
     const projects = await Project.find().skip(skip).limit(limit);
-    const totalPages = Math.ceil(total / limit) || 1;
 
     res.status(200).json({
       success: true,
       page,
       limit,
       total,
-      totalPages,
+      totalPages: Math.ceil(total / limit),
       count: projects.length,
       projects,
     });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
