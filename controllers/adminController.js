@@ -19,16 +19,20 @@ const authAdmin = async (req, res) => {
 
     if (admin && (await admin.matchPassword(password))) {
       res.json({
-        _id: admin._id,
-        name: admin.name,
-        email: admin.email,
-        token: generateToken(admin._id, admin.name, admin.email),
+        success: true,
+        message: "Login successful",
+        data: {
+          _id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          token: generateToken(admin._id, admin.name, admin.email),
+        }
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
@@ -76,7 +80,11 @@ const addAdmin = async (req, res) => {
 const getAdmins = async (req, res) => {
   try {
     const admins = await Admin.find({}).select('-password');
-    res.json(admins);
+    res.json({
+      success: true,
+      message: "Admins fetched successfully",
+      data: admins
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -100,16 +108,20 @@ const updateAdmin = async (req, res) => {
       const updatedAdmin = await admin.save();
 
       res.json({
-        _id: updatedAdmin._id,
-        name: updatedAdmin.name,
-        email: updatedAdmin.email,
-        token: generateToken(updatedAdmin._id),
+        success: true,
+        message: 'User updated successfully',
+        data: {
+          _id: updatedAdmin._id,
+          name: updatedAdmin.name,
+          email: updatedAdmin.email,
+          token: generateToken(updatedAdmin._id),
+        }
       });
     } else {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ success: false, message: 'User not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
