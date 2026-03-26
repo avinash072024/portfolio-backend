@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const projectRoutes = require('./routes/projectRoutes');
 const skillRoutes = require('./routes/skillRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 // Load env vars
 dotenv.config();
@@ -20,6 +21,7 @@ app.use(express.json());
 // Routes
 app.use('/api/projects', projectRoutes);
 app.use('/api/skills', skillRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {
