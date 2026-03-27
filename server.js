@@ -6,6 +6,7 @@ const projectRoutes = require('./routes/projectRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const serviceRoutes = require('./routes/serviceRoutes');
 
 // Load env vars
 dotenv.config();
@@ -24,6 +25,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/services', serviceRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {
