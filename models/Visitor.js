@@ -2,50 +2,90 @@ const mongoose = require('mongoose');
 
 const visitorSchema = mongoose.Schema(
   {
-    status: {
-      type: String,
-      default: 'success',
+    ip: {
+      type: String, // Replacing 'query'
+      required: true,
     },
-    country: {
-      type: String,
-    },
-    countryCode: {
+    network: {
       type: String,
     },
-    region: {
-      type: String,
-    },
-    regionName: {
+    version: {
       type: String,
     },
     city: {
       type: String,
     },
-    zip: {
+    region: {
       type: String,
     },
-    lat: {
+    region_code: {
+      type: String,
+    },
+    country: {
+      type: String,
+    },
+    country_name: {
+      type: String,
+    },
+    country_code: {
+      type: String,
+    },
+    country_code_iso3: {
+      type: String,
+    },
+    country_capital: {
+      type: String,
+    },
+    country_tld: {
+      type: String,
+    },
+    continent_code: {
+      type: String,
+    },
+    in_eu: {
+      type: Boolean,
+    },
+    postal: {
+      type: String,
+    },
+    latitude: {
       type: Number,
     },
-    lon: {
+    longitude: {
       type: Number,
     },
     timezone: {
       type: String,
     },
-    isp: {
+    utc_offset: {
+      type: String,
+    },
+    country_calling_code: {
+      type: String,
+    },
+    currency: {
+      type: String,
+    },
+    currency_name: {
+      type: String,
+    },
+    languages: {
+      type: String,
+    },
+    country_area: {
+      type: Number,
+    },
+    country_population: {
+      type: Number,
+    },
+    asn: {
       type: String,
     },
     org: {
       type: String,
     },
-    as: {
-      type: String,
-    },
-    query: {
-      type: String, // This is the IP address
-      required: true,
-    },
+    // Keep old fields as optional for backward compatibility if needed, 
+    // but the user wants to "change accordingly" so I'll stick to the new format.
   },
   {
     timestamps: true,

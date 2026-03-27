@@ -6,10 +6,11 @@ const Visitor = require('../models/Visitor');
 const saveVisitorData = async (req, res) => {
   try {
     const visitorData = req.body;
-    const { query } = visitorData;
+    const { ip } = visitorData;
 
     // Check if visitor with same IP already exists
-    const existingVisitor = await Visitor.findOne({ query });
+    const existingVisitor = await Visitor.findOne({ ip });
+
 
     if (existingVisitor) {
       return res.status(200).json({
