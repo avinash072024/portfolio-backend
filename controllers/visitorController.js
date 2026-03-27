@@ -46,6 +46,7 @@ const getVisitors = async (req, res) => {
     const visitors = await Visitor.find().sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
+      message: 'Visitor data fetched successfully',
       count: visitors.length,
       data: visitors,
     });
