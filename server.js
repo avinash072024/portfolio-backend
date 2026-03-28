@@ -8,6 +8,8 @@ const adminRoutes = require('./routes/adminRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const visitorRoutes = require('./routes/visitorRoutes');
+const experienceRoutes = require('./routes/experienceRoutes');
+const educationRoutes = require('./routes/educationRoutes');
 
 
 // Load env vars
@@ -29,6 +31,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/visitor', visitorRoutes);
+app.use('/api/experience', experienceRoutes);
+app.use('/api/education', educationRoutes);
 
 
 // Base route for testing
