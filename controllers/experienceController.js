@@ -5,7 +5,7 @@ const Experience = require('../models/Experience');
 // @access  Public
 const getExperiences = async (req, res) => {
   try {
-    const experiences = await Experience.find().sort({ createdAt: -1 });
+    const experiences = await Experience.find();
     res.status(200).json({
       success: true,
       count: experiences.length,

@@ -5,7 +5,7 @@ const Education = require('../models/Education');
 // @access  Public
 const getEducations = async (req, res) => {
   try {
-    const educations = await Education.find().sort({ createdAt: -1 });
+    const educations = await Education.find();
     res.status(200).json({
       success: true,
       count: educations.length,
