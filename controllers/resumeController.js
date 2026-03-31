@@ -51,11 +51,15 @@ exports.updateResume = async (req, res) => {
 
     // If a new file is uploaded, remove old file and update fields
     if (req.file) {
-      // remove old file
-      if (resume.filename) {
-        const oldPath = path.join(__dirname, '..', 'uploads', 'resumes', resume.filename);
-        fs.unlink(oldPath, (err) => {});
-      }
+        // remove old file
+        if (resume.filename) {
+          const oldPath = path.join(__dirname, '..', 'uploads', 'resumes', resume.filename);
+          try {
+            if (fs.existsSync(oldPath)) await fs.promises.unlink(oldPath);
+          } catch (err) {
+            console.error('Failed to remove old resume file:', err.message);
+          }
+        }
 
       resume.filename = req.file.filename;
       resume.originalName = req.file.originalname;
@@ -78,14 +82,18 @@ exports.deleteResume = async (req, res) => {
     if (!resume) return res.status(404).json({ message: 'Resume not found' });
 
     // remove file from disk
-    if (resume.filename) {
-      const filePath = path.join(__dirname, '..', 'uploads', 'resumes', resume.filename);
-      fs.unlink(filePath, (err) => {});
-    }
+      if (resume.filename) {
+        const filePath = path.join(__dirname, '..', 'uploads', 'resumes', resume.filename);
+        try {
+          if (fs.existsSync(filePath)) await fs.promises.unlink(filePath);
+        } catch (err) {
+          console.error('Failed to remove resume file during delete:', err.message);
+        }
+      }
 
     await resume.deleteOne();
-    res.json({ message: 'Resume deleted' });
+    res.json({ success: true, message: 'Resume deleted' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
