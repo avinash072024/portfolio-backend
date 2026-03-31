@@ -10,6 +10,8 @@ const serviceRoutes = require('./routes/serviceRoutes');
 const visitorRoutes = require('./routes/visitorRoutes');
 const experienceRoutes = require('./routes/experienceRoutes');
 const educationRoutes = require('./routes/educationRoutes');
+const resumeRoutes = require('./routes/resumeRoutes');
+const path = require('path');
 
 
 // Load env vars
@@ -24,6 +26,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Routes
 app.use('/api/projects', projectRoutes);
 app.use('/api/skills', skillRoutes);
@@ -33,6 +38,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/visitor', visitorRoutes);
 app.use('/api/experience', experienceRoutes);
 app.use('/api/education', educationRoutes);
+app.use('/api/resumes', resumeRoutes);
 
 
 // Base route for testing

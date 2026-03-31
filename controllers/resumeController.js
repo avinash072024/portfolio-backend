@@ -1,0 +1,91 @@
+const Resume = require('../models/Resume');
+const fs = require('fs');
+const path = require('path');
+
+// GET /api/resumes
+exports.getResumes = async (req, res) => {
+  try {
+    const resumes = await Resume.find().sort({ createdAt: -1 });
+    res.json(resumes);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// GET /api/resumes/:id
+exports.getResume = async (req, res) => {
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) return res.status(404).json({ message: 'Resume not found' });
+    res.json(resume);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// POST /api/resumes
+exports.addResume = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const file = req.file;
+    const resume = await Resume.create({
+      filename: file.filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      path: `/uploads/resumes/${file.filename}`,
+    });
+
+    res.status(201).json(resume);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// PUT /api/resumes/:id
+exports.updateResume = async (req, res) => {
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) return res.status(404).json({ message: 'Resume not found' });
+
+    // If a new file is uploaded, remove old file and update fields
+    if (req.file) {
+      // remove old file
+      if (resume.filename) {
+        const oldPath = path.join(__dirname, '..', 'uploads', 'resumes', resume.filename);
+        fs.unlink(oldPath, (err) => {});
+      }
+
+      resume.filename = req.file.filename;
+      resume.originalName = req.file.originalname;
+      resume.mimeType = req.file.mimetype;
+      resume.size = req.file.size;
+      resume.path = `/uploads/resumes/${req.file.filename}`;
+    }
+
+    await resume.save();
+    res.json(resume);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// DELETE /api/resumes/:id
+exports.deleteResume = async (req, res) => {
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) return res.status(404).json({ message: 'Resume not found' });
+
+    // remove file from disk
+    if (resume.filename) {
+      const filePath = path.join(__dirname, '..', 'uploads', 'resumes', resume.filename);
+      fs.unlink(filePath, (err) => {});
+    }
+
+    await resume.deleteOne();
+    res.json({ message: 'Resume deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
