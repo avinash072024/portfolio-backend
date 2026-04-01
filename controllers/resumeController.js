@@ -1,11 +1,17 @@
 const Resume = require('../models/Resume');
+const cache = require('../utils/cache');
 const fs = require('fs');
 const path = require('path');
 
 // GET /api/resumes
 exports.getResumes = async (req, res) => {
   try {
+    const cacheKey = `resumes:${req.originalUrl}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const resumes = await Resume.find().sort({ createdAt: -1 });
+    cache.set(cacheKey, resumes, 30);
     res.json(resumes);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -15,8 +21,13 @@ exports.getResumes = async (req, res) => {
 // GET /api/resumes/:id
 exports.getResume = async (req, res) => {
   try {
+    const cacheKey = `resume:${req.params.id}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const resume = await Resume.findById(req.params.id);
     if (!resume) return res.status(404).json({ message: 'Resume not found' });
+    cache.set(cacheKey, resume, 60);
     res.json(resume);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -37,6 +48,7 @@ exports.addResume = async (req, res) => {
       path: `/uploads/resumes/${file.filename}`,
     });
 
+    cache.flush();
     res.status(201).json(resume);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -69,6 +81,7 @@ exports.updateResume = async (req, res) => {
     }
 
     await resume.save();
+    cache.flush();
     res.json(resume);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -92,6 +105,7 @@ exports.deleteResume = async (req, res) => {
       }
 
     await resume.deleteOne();
+    cache.flush();
     res.json({ success: true, message: 'Resume deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error', error: error.message });

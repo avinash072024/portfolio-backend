@@ -1,16 +1,23 @@
 const Experience = require('../models/Experience');
+const cache = require('../utils/cache');
 
 // @desc    Get all experiences
 // @route   GET /api/experience
 // @access  Public
 const getExperiences = async (req, res) => {
   try {
+    const cacheKey = `experiences:${req.originalUrl}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.status(200).json(cached);
+
     const experiences = await Experience.find();
-    res.status(200).json({
+    const resp = {
       success: true,
       count: experiences.length,
       experiences
-    });
+    };
+    cache.set(cacheKey, resp, 30);
+    res.status(200).json(resp);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -49,6 +56,7 @@ const createExperience = async (req, res) => {
       description,
     });
 
+    cache.flush();
     res.status(201).json({ success: true, message: 'Experience created successfully', data: experience });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -72,6 +80,7 @@ const updateExperience = async (req, res) => {
       { new: true }
     );
 
+    cache.flush();
     res.status(200).json({ success: true, message: 'Experience updated successfully', data: updatedExperience });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -91,6 +100,7 @@ const deleteExperience = async (req, res) => {
 
     await experience.deleteOne();
 
+    cache.flush();
     res.status(200).json({ success: true, message: 'Experience deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

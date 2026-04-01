@@ -1,4 +1,5 @@
 const Visitor = require('../models/Visitor');
+const cache = require('../utils/cache');
 
 // @desc    Save visitor data
 // @route   POST /api/visitor/log
@@ -23,6 +24,8 @@ const saveVisitorData = async (req, res) => {
     const visitor = new Visitor(visitorData);
     await visitor.save();
 
+    // clear caches so admin list reflects new visitor
+    cache.flush();
 
     res.status(201).json({
       success: true,
@@ -46,14 +49,20 @@ const getVisitors = async (req, res) => {
     const page = parseInt(req.query.page);
     const limit = parseInt(req.query.limit);
 
+    const cacheKey = `visitors:${req.originalUrl}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.status(200).json(cached);
+
     // If no pagination params → return all
     if (!page || !limit) {
       const Visitors = await Visitor.find().sort({ createdAt: -1 });
-      return res.status(200).json({
+      const resp = {
         success: true,
         count: Visitors.length,
         Visitors,
-      });
+      };
+      cache.set(cacheKey, resp, 30);
+      return res.status(200).json(resp);
     }
 
     // With pagination
@@ -62,7 +71,7 @@ const getVisitors = async (req, res) => {
     const total = await Visitor.countDocuments();
     const Visitors = await Visitor.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
 
-    res.status(200).json({
+    const resp = {
       success: true,
       page,
       limit,
@@ -70,7 +79,9 @@ const getVisitors = async (req, res) => {
       totalPages: Math.ceil(total / limit),
       count: Visitors.length,
       Visitors,
-    });
+    };
+    cache.set(cacheKey, resp, 30);
+    res.status(200).json(resp);
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

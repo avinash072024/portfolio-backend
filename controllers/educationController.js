@@ -1,16 +1,23 @@
 const Education = require('../models/Education');
+const cache = require('../utils/cache');
 
 // @desc    Get all education records
 // @route   GET /api/education
 // @access  Public
 const getEducations = async (req, res) => {
   try {
+    const cacheKey = `educations:${req.originalUrl}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.status(200).json(cached);
+
     const educations = await Education.find();
-    res.status(200).json({
+    const resp = {
       success: true,
       count: educations.length,
       educations,
-    });
+    };
+    cache.set(cacheKey, resp, 30);
+    res.status(200).json(resp);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -49,6 +56,7 @@ const createEducation = async (req, res) => {
       description,
     });
 
+    cache.flush();
     res.status(201).json({ success: true, message: 'Education created successfully', data: education });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -72,6 +80,7 @@ const updateEducation = async (req, res) => {
       { new: true }
     );
 
+    cache.flush();
     res.status(200).json({ success: true, message: 'Education updated successfully', data: updatedEducation });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -91,6 +100,7 @@ const deleteEducation = async (req, res) => {
 
     await education.deleteOne();
 
+    cache.flush();
     res.status(200).json({ success: true, message: 'Education deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

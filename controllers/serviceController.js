@@ -1,21 +1,27 @@
 const Service = require('../models/Service');
+const cache = require('../utils/cache');
 
 // @desc    Get all services
 // @route   GET /api/services
 // @access  Public
 const getServices = async (req, res) => {
   try {
+    const cacheKey = `services:${req.originalUrl}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.status(200).json(cached);
     const page = parseInt(req.query.page);
     const limit = parseInt(req.query.limit);
 
     // If no pagination params → return all
     if (!page || !limit) {
       const services = await Service.find();
-      return res.status(200).json({
+      const resp = {
         success: true,
         count: services.length,
         services
-      });
+      };
+      cache.set(cacheKey, resp, 30);
+      return res.status(200).json(resp);
     }
 
     // With pagination  
@@ -24,7 +30,7 @@ const getServices = async (req, res) => {
     const total = await Service.countDocuments();
     const services = await Service.find().skip(skip).limit(limit);
 
-    res.status(200).json({
+    const resp = {
       success: true,
       page,
       limit,
@@ -32,7 +38,9 @@ const getServices = async (req, res) => {
       totalPages: Math.ceil(total / limit),
       count: services.length,
       services,
-    });
+    };
+    cache.set(cacheKey, resp, 30);
+    res.status(200).json(resp);
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -44,11 +52,17 @@ const getServices = async (req, res) => {
 // @access  Public
 const getServiceById = async (req, res) => {
   try {
+    const cacheKey = `service:${req.params.id}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.status(200).json(cached);
+
     const service = await Service.findById(req.params.id);
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
-    res.status(200).json({ success: true, service });
+    const resp = { success: true, service };
+    cache.set(cacheKey, resp, 60);
+    res.status(200).json(resp);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -72,6 +86,7 @@ const createService = async (req, res) => {
       features,
     });
 
+    cache.flush();
     res.status(201).json({ success: true, message: 'Service created successfully', service });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -95,6 +110,7 @@ const updateService = async (req, res) => {
       { new: true }
     );
 
+    cache.flush();
     res.status(200).json({ success: true, message: 'Service updated successfully', service: updatedService });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -114,6 +130,7 @@ const deleteService = async (req, res) => {
 
     await service.deleteOne();
 
+    cache.flush();
     res.status(200).json({ success: true, message: 'Service deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
