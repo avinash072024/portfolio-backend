@@ -4,6 +4,7 @@ const cors = require('cors');
 const compression = require('compression');
 const connectDB = require('./config/db');
 const projectRoutes = require('./routes/projectRoutes');
+const projectCategoryRoutes = require('./routes/projectCategoryRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const contactRoutes = require('./routes/contactRoutes');
@@ -33,6 +34,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/projects', projectRoutes);
+app.use('/api/project-categories', projectCategoryRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
