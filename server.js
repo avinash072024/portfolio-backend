@@ -14,6 +14,7 @@ const visitorRoutes = require('./routes/visitorRoutes');
 const experienceRoutes = require('./routes/experienceRoutes');
 const educationRoutes = require('./routes/educationRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
+const chatbotRoutes = require('./routes/chatbotRoutes');
 const path = require('path');
 
 
@@ -45,6 +46,7 @@ app.use('/api/visitor', visitorRoutes);
 app.use('/api/experience', experienceRoutes);
 app.use('/api/education', educationRoutes);
 app.use('/api/resumes', resumeRoutes);
+app.use('/api/chat', chatbotRoutes);
 
 
 // Base route for testing
