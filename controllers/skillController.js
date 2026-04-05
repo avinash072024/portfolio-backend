@@ -1,37 +1,6 @@
 const Skill = require('../models/Skill');
 const cache = require('../utils/cache');
 
-// // @desc    Get all skills
-// // @route   GET /api/skills
-// // @access  Public
-// const getSkills = async (req, res) => {
-//   try {
-//     const page = parseInt(req.query.page, 10) || 1;
-//     const limit = parseInt(req.query.limit, 10) || 5;
-//     const safePage = page > 0 ? page : 1;
-//     const safeLimit = limit > 0 ? limit : 5;
-
-//     const total = await Skill.countDocuments();
-//     const totalPages = Math.ceil(total / safeLimit) || 1;
-//     const skip = (safePage - 1) * safeLimit;
-
-//     const skills = await Skill.find().skip(skip).limit(safeLimit);
-
-//     res.status(200).json({
-//       success: true,
-//       page: safePage,
-//       limit: safeLimit,
-//       total,
-//       totalPages,
-//       count: skills.length,
-//       skills,
-//     });
-//   } catch (error) {
-//     res.status(500).json({success: false, message: error.message });
-//   }
-// };
-
-
 // @desc    Get all skills
 // @route   GET /api/skills
 // @access  Public
@@ -40,26 +9,36 @@ const getSkills = async (req, res) => {
     const cacheKey = `skills:${req.originalUrl}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.status(200).json(cached);
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
 
-    // If no pagination params → return all
+    const { search, page: pageQuery, limit: limitQuery } = req.query;
+    const page = parseInt(pageQuery);
+    const limit = parseInt(limitQuery);
+
+    let query = {};
+    if (search) {
+      query = { name: { $regex: search, $options: 'i' } };
+    }
+
+    // If no pagination params → return all filtered
     if (!page || !limit) {
-      const skills = await Skill.find();
+      const skills = await Skill.find(query).sort({ createdAt: -1 });
       const resp = {
         success: true,
         count: skills.length,
-        skills
+        skills,
       };
       cache.set(cacheKey, resp, 30);
       return res.status(200).json(resp);
     }
 
-    // With pagination  
+    // With pagination
     const skip = (page - 1) * limit;
 
-    const total = await Skill.countDocuments();
-    const skills = await Skill.find().skip(skip).limit(limit);
+    const total = await Skill.countDocuments(query);
+    const skills = await Skill.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const resp = {
       success: true,
@@ -81,7 +60,7 @@ const getSkills = async (req, res) => {
 // @desc    Get single skill
 // @route   GET /api/skills/:id
 // @access  Public
-const getSkillById = async (req, res) => {
+const getSkill = async (req, res) => {
   try {
     const cacheKey = `skill:${req.params.id}`;
     const cached = cache.get(cacheKey);
@@ -91,11 +70,11 @@ const getSkillById = async (req, res) => {
     if (!skill) {
       return res.status(404).json({ success: false, message: 'Skill not found' });
     }
-    const resp = {success: true, skill};
+    const resp = { success: true, skill };
     cache.set(cacheKey, resp, 60);
     res.status(200).json(resp);
   } catch (error) {
-    res.status(500).json({success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -104,24 +83,11 @@ const getSkillById = async (req, res) => {
 // @access  Private
 const createSkill = async (req, res) => {
   try {
-    const { name, icon, level, color, category } = req.body;
-
-    if (!name || !icon || !level || !color || !category) {
-      return res.status(400).json({ success: false, message: 'Please add all required fields' });
-    }
-
-    const skill = await Skill.create({
-      name,
-      icon,
-      level,
-      color,
-      category,
-    });
-
+    const skill = await Skill.create(req.body);
     cache.flush();
-    res.status(201).json( {success: true, message: 'Skill created successfully'});
+    res.status(201).json({ success: true, message: 'Skill created successfully' });
   } catch (error) {
-    res.status(500).json({success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -143,9 +109,9 @@ const updateSkill = async (req, res) => {
     );
 
     cache.flush();
-    res.status(200).json({success: true, message: 'Skill updated successfully'});
+    res.status(200).json({ success: true, message: 'Skill updated successfully' });
   } catch (error) {
-    res.status(500).json({success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -161,9 +127,8 @@ const deleteSkill = async (req, res) => {
     }
 
     await skill.deleteOne();
-
     cache.flush();
-    res.status(200).json({ success: true, message: 'Skill deleted successfully' });
+    res.status(200).json({ success: true, message: 'Skill removed' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -171,7 +136,7 @@ const deleteSkill = async (req, res) => {
 
 module.exports = {
   getSkills,
-  getSkillById,
+  getSkill,
   createSkill,
   updateSkill,
   deleteSkill,
