@@ -4,41 +4,24 @@ const cache = require('../utils/cache');
 // @desc    Get all projects
 // @route   GET /api/projects
 // @access  Public
-// const getProjects = async (req, res) => {
-//   try {
-//     const page = parseInt(req.query.page, 10) || 1;
-//     const limit = parseInt(req.query.limit, 10) || 5;
-//     const skip = (page - 1) * limit;
-
-//     const total = await Project.countDocuments();
-//     const projects = await Project.find().skip(skip).limit(limit);
-//     const totalPages = Math.ceil(total / limit) || 1;
-
-//     res.status(200).json({
-//       success: true,
-//       page,
-//       limit,
-//       total,
-//       totalPages,
-//       count: projects.length,
-//       projects,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
 const getProjects = async (req, res) => {
   try {
     const cacheKey = `projects:${req.originalUrl}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.status(200).json(cached);
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
 
-    // If no pagination params → return all
+    const { search, page: pageQuery, limit: limitQuery } = req.query;
+    const page = parseInt(pageQuery);
+    const limit = parseInt(limitQuery);
+
+    let query = {};
+    if (search) {
+      query = { title: { $regex: search, $options: 'i' } };
+    }
+
+    // If no pagination params → return all filtered
     if (!page || !limit) {
-      const projects = await Project.find();
+      const projects = await Project.find(query).sort({ createdAt: -1 });
       const resp = {
         success: true,
         count: projects.length,
@@ -51,8 +34,11 @@ const getProjects = async (req, res) => {
     // With pagination
     const skip = (page - 1) * limit;
 
-    const total = await Project.countDocuments();
-    const projects = await Project.find().skip(skip).limit(limit);
+    const total = await Project.countDocuments(query);
+    const projects = await Project.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const resp = {
       success: true,
