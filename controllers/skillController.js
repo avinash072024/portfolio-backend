@@ -21,7 +21,7 @@ const getSkills = async (req, res) => {
 
     // If no pagination params → return all filtered
     if (!page || !limit) {
-      const skills = await Skill.find(query).sort({ createdAt: -1 });
+      const skills = await Skill.find(query);
       const resp = {
         success: true,
         count: skills.length,
@@ -36,7 +36,6 @@ const getSkills = async (req, res) => {
 
     const total = await Skill.countDocuments(query);
     const skills = await Skill.find(query)
-      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 

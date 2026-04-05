@@ -9,16 +9,23 @@ const getServices = async (req, res) => {
     const cacheKey = `services:${req.originalUrl}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.status(200).json(cached);
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
 
-    // If no pagination params → return all
+    const { search, page: pageQuery, limit: limitQuery } = req.query;
+    const page = parseInt(pageQuery);
+    const limit = parseInt(limitQuery);
+
+    let query = {};
+    if (search) {
+      query = { title: { $regex: search, $options: 'i' } };
+    }
+
+    // If no pagination params → return all filtered
     if (!page || !limit) {
-      const services = await Service.find();
+      const services = await Service.find(query);
       const resp = {
         success: true,
         count: services.length,
-        services
+        services,
       };
       cache.set(cacheKey, resp, 30);
       return res.status(200).json(resp);
@@ -27,8 +34,8 @@ const getServices = async (req, res) => {
     // With pagination  
     const skip = (page - 1) * limit;
 
-    const total = await Service.countDocuments();
-    const services = await Service.find().skip(skip).limit(limit);
+    const total = await Service.countDocuments(query);
+    const services = await Service.find(query).skip(skip).limit(limit);
 
     const resp = {
       success: true,
@@ -73,23 +80,11 @@ const getServiceById = async (req, res) => {
 // @access  Private
 const createService = async (req, res) => {
   try {
-    const { title, icon, description, features } = req.body;
-
-    if (!title || !icon || !description || !features || !Array.isArray(features)) {
-      return res.status(400).json({ success: false, message: 'Please add all required fields' });
-    }
-
-    const service = await Service.create({
-      title,
-      icon,
-      description,
-      features,
-    });
-
+    const service = await Service.create(req.body);
     cache.flush();
     res.status(201).json({ success: true, message: 'Service created successfully', service });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -113,7 +108,7 @@ const updateService = async (req, res) => {
     cache.flush();
     res.status(200).json({ success: true, message: 'Service updated successfully', service: updatedService });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 

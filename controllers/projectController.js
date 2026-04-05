@@ -21,7 +21,7 @@ const getProjects = async (req, res) => {
 
     // If no pagination params → return all filtered
     if (!page || !limit) {
-      const projects = await Project.find(query).sort({ createdAt: -1 });
+      const projects = await Project.find(query);
       const resp = {
         success: true,
         count: projects.length,
@@ -36,7 +36,6 @@ const getProjects = async (req, res) => {
 
     const total = await Project.countDocuments(query);
     const projects = await Project.find(query)
-      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
