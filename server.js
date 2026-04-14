@@ -14,6 +14,7 @@ const visitorRoutes = require('./routes/visitorRoutes');
 const experienceRoutes = require('./routes/experienceRoutes');
 const educationRoutes = require('./routes/educationRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const path = require('path');
 
 
@@ -45,6 +46,7 @@ app.use('/api/visitor', visitorRoutes);
 app.use('/api/experience', experienceRoutes);
 app.use('/api/education', educationRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/emails', emailRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {
