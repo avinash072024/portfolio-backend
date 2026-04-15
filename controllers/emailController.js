@@ -14,9 +14,19 @@ const getEmails = async (req, res) => {
     const page = parseInt(pageQuery);
     const limit = parseInt(limitQuery);
 
+    // let query = {};
+    // if (search) {
+    //   query = { firstname: { $regex: search, $options: 'i' } };
+    // }
+
     let query = {};
     if (search) {
-      query = { firstname: { $regex: search, $options: 'i' } };
+      query = {
+        $or: [
+          { firstname: { $regex: search, $options: 'i' } },
+          { lastname: { $regex: search, $options: 'i' } },
+        ],
+      };
     }
 
     // If no pagination params → return all filtered
