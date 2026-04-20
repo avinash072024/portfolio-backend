@@ -4,6 +4,24 @@ const cache = require('../utils/cache');
 // @desc    Get all experiences
 // @route   GET /api/experience
 // @access  Public
+// const getExperiences = async (req, res) => {
+//   try {
+//     const cacheKey = `experiences:${req.originalUrl}`;
+//     const cached = cache.get(cacheKey);
+//     if (cached) return res.status(200).json(cached);
+
+//     const experiences = await Experience.find();
+//     const resp = {
+//       success: true,
+//       count: experiences.length,
+//       experiences
+//     };
+//     cache.set(cacheKey, resp, 30);
+//     res.status(200).json(resp);
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 const getExperiences = async (req, res) => {
   try {
     const cacheKey = `experiences:${req.originalUrl}`;
@@ -11,13 +29,41 @@ const getExperiences = async (req, res) => {
     if (cached) return res.status(200).json(cached);
 
     const experiences = await Experience.find();
+
+    // 🔥 Calculate total experience
+    let totalMonths = 0;
+
+    experiences.forEach(exp => {
+      if (exp.duration) {
+        const parts = exp.duration.split('-').map(p => p.trim());
+
+        let startYear = parseInt(parts[0]);
+        let endYear;
+
+        if (parts[1].toLowerCase() === 'present') {
+          endYear = new Date().getFullYear();
+        } else {
+          endYear = parseInt(parts[1]);
+        }
+
+        if (!isNaN(startYear) && !isNaN(endYear)) {
+          totalMonths += (endYear - startYear) * 12;
+        }
+      }
+    });
+
+    const totalYears = Math.round(totalMonths / 12);
+
     const resp = {
       success: true,
       count: experiences.length,
+      totalExperience: totalYears, // 👈 added
       experiences
     };
+
     cache.set(cacheKey, resp, 30);
     res.status(200).json(resp);
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
