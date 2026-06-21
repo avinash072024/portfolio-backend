@@ -139,7 +139,37 @@ const deleteAdmin = async (req, res) => {
       res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Reset password
+// @route   POST /api/admin/reset-password
+// @access  Public
+const resetPassword = async (req, res) => {
+  try {
+    const { email, oldPassword, newPassword } = req.body;
+
+    const admin = await Admin.findOne({ email });
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await admin.matchPassword(oldPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Invalid current password' });
+    }
+
+    admin.password = newPassword;
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
@@ -148,5 +178,6 @@ module.exports = {
   addAdmin,
   getAdmins,
   updateAdmin,
-  deleteAdmin
+  deleteAdmin,
+  resetPassword
 };
