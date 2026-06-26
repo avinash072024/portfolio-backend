@@ -44,32 +44,52 @@ const saveVisitorData = async (req, res) => {
 // @desc    Get all visitors
 // @route   GET /api/visitor/all
 // @access  Private (Admin only - adding simple protection later if needed)
+// @query   page    {number}  Page number (optional, requires limit)
+// @query   limit   {number}  Records per page (optional, requires page)
+// @query   date    {string}  Filter by createdAt date in YYYY-MM-DD format (optional)
 const getVisitors = async (req, res) => {
   try {
     const page = parseInt(req.query.page);
     const limit = parseInt(req.query.limit);
+    const { date } = req.query;
+
+    // Build date filter on createdAt if ?date=YYYY-MM-DD is provided
+    const filter = {};
+    if (date) {
+      const startOfDay = new Date(date);
+      if (isNaN(startOfDay.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid date format. Please use YYYY-MM-DD.',
+        });
+      }
+      const endOfDay = new Date(date);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+    }
 
     const cacheKey = `visitors:${req.originalUrl}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.status(200).json(cached);
 
-    // If no pagination params → return all
+    // If no pagination params → return all (with optional date filter)
     if (!page || !limit) {
-      const Visitors = await Visitor.find().sort({ createdAt: -1 });
+      const Visitors = await Visitor.find(filter).sort({ createdAt: -1 });
       const resp = {
         success: true,
         count: Visitors.length,
+        ...(date && { date }),
         Visitors,
       };
       cache.set(cacheKey, resp, 30);
       return res.status(200).json(resp);
     }
 
-    // With pagination
+    // With pagination (and optional date filter)
     const skip = (page - 1) * limit;
 
-    const total = await Visitor.countDocuments();
-    const Visitors = await Visitor.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const total = await Visitor.countDocuments(filter);
+    const Visitors = await Visitor.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit);
 
     const resp = {
       success: true,
@@ -78,6 +98,7 @@ const getVisitors = async (req, res) => {
       total,
       totalPages: Math.ceil(total / limit),
       count: Visitors.length,
+      ...(date && { date }),
       Visitors,
     };
     cache.set(cacheKey, resp, 30);

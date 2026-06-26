@@ -133,9 +133,38 @@ const deleteEmail = async (req, res) => {
   }
 };
 
+// @desc    Delete multiple emails
+// @route   DELETE /api/emails/bulk
+// @access  Private
+const deleteMultipleEmails = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of email IDs to delete' });
+    }
+
+    const result = await Email.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'No emails found for the provided IDs' });
+    }
+
+    cache.flush();
+    res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} email(s) deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getEmails,
   getEmail,
   createMails,
   deleteEmail,
+  deleteMultipleEmails,
 };
