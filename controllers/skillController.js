@@ -133,10 +133,42 @@ const deleteSkill = async (req, res) => {
   }
 };
 
+// @desc    Delete multiple skills
+// @route   DELETE /api/skills/bulk
+// @access  Private
+const deleteMultipleSkills = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of skill IDs to delete' });
+    }
+
+    const result = await Skill.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'No skills found for the provided IDs' });
+    }
+
+    const deleteCount = `${result.deletedCount}` === '1' ? 'skill' : 'skills';
+
+    cache.flush();
+    res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} ${deleteCount} deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getSkills,
   getSkill,
   createSkill,
   updateSkill,
   deleteSkill,
+  deleteMultipleSkills,
 };
+

@@ -134,10 +134,41 @@ const deleteProject = async (req, res) => {
   }
 };
 
+// @desc    Delete multiple projects
+// @route   DELETE /api/projects/bulk
+// @access  Private
+const deleteMultipleProjects = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of project IDs to delete' });
+    }
+
+    const result = await Project.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'No projects found for the provided IDs' });
+    }
+
+    const deleteCount = `${result.deletedCount}` === '1' ? 'project' : 'projects';
+
+    cache.flush();
+    res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} ${deleteCount} deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getProjects,
   getProject,
   createProject,
   updateProject,
   deleteProject,
+  deleteMultipleProjects,
 };

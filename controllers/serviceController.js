@@ -82,7 +82,7 @@ const createService = async (req, res) => {
   try {
     const service = await Service.create(req.body);
     cache.flush();
-    res.status(201).json({ success: true, message: 'Service created successfully', service });
+    res.status(201).json({ success: true, message: 'Service created successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -106,7 +106,7 @@ const updateService = async (req, res) => {
     );
 
     cache.flush();
-    res.status(200).json({ success: true, message: 'Service updated successfully', service: updatedService });
+    res.status(200).json({ success: true, message: 'Service updated successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -132,10 +132,46 @@ const deleteService = async (req, res) => {
   }
 };
 
+// @desc    Delete multiple services
+// @route   DELETE /api/services/bulk
+// @access  Private
+const deleteMultipleServices = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of service IDs to delete' });
+    }
+
+    const result = await Service.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'No services found for the provided IDs' });
+    }
+
+    const deleteCount = `${result.deletedCount}` === '1' ? 'service' : 'services';
+
+    cache.flush();
+    // res.status(200).json({
+    //   success: true,
+    //   message: `${result.deletedCount} service(s) deleted successfully`,
+    //   deletedCount: result.deletedCount,
+    // });
+    res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} ${deleteCount} deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getServices,
   getServiceById,
   createService,
   updateService,
   deleteService,
+  deleteMultipleServices,
 };

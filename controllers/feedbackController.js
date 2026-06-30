@@ -174,6 +174,75 @@ const deleteFeedback = async (req, res) => {
   }
 };
 
+// @desc    Delete multiple feedbacks
+// @route   DELETE /api/feedback/bulk
+// @access  Private
+const deleteMultipleFeedbacks = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of feedback IDs to delete' });
+    }
+
+    const result = await Feedback.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'No feedbacks found for the provided IDs' });
+    }
+
+    const deleteCount = `${result.deletedCount}` === '1' ? 'feedback' : 'feedbacks';
+
+    cache.flush();
+    res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} ${deleteCount} deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update multiple feedback verified flags
+// @route   PATCH /api/feedback/bulk/verified
+// @access  Private
+const updateMultipleFeedbackVerified = async (req, res) => {
+  try {
+    const { ids, verified } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of feedback IDs to update' });
+    }
+
+    if (typeof verified !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'verified must be a boolean value',
+      });
+    }
+
+    const result = await Feedback.updateMany(
+      { _id: { $in: ids } },
+      { $set: { verified: verified } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'No feedbacks found for the provided IDs' });
+    }
+
+    cache.flush();
+    res.status(200).json({
+      success: true,
+      message: `${result.modifiedCount} feedback verification status updated successfully`,
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getFeedbacks,
   getFeedback,
@@ -181,4 +250,6 @@ module.exports = {
   updateFeedback,
   updateFeedbackVerified,
   deleteFeedback,
+  deleteMultipleFeedbacks,
+  updateMultipleFeedbackVerified,
 };

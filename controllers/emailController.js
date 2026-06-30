@@ -150,10 +150,17 @@ const deleteMultipleEmails = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No emails found for the provided IDs' });
     }
 
+    const deleteCount = `${result.deletedCount}` === '1' ? 'email' : 'emails';
+
     cache.flush();
+    // res.status(200).json({
+    //   success: true,
+    //   message: `${result.deletedCount} email(s) deleted successfully`,
+    //   deletedCount: result.deletedCount,
+    // });
     res.status(200).json({
       success: true,
-      message: `${result.deletedCount} email(s) deleted successfully`,
+      message: `${result.deletedCount} ${deleteCount} deleted successfully`,
       deletedCount: result.deletedCount,
     });
   } catch (error) {
