@@ -22,6 +22,7 @@ const getProjects = async (req, res) => {
     // If no pagination params → return all filtered
     if (!page || !limit) {
       const projects = await Project.find(query);
+      // const projects = await Project.find(query).sort({ completedYear: -1 });
       const resp = {
         success: true,
         count: projects.length,

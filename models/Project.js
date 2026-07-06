@@ -10,17 +10,24 @@ const projectSchema = mongoose.Schema(
       type: String,
       required: [true, 'Please add a category'],
     },
-    date: {
+    clientName: {
+      type: String
+    },
+    teamSize: {
+      type: Number,
+      required: [true, 'Please add a team size'],
+    },
+    completedYear: {
       type: String,
-      required: [true, 'Please add a date'],
+      required: [true, 'Please add a completed year'],
     },
     desc: {
       type: [String],
       required: [true, 'Please add a description'],
     },
-    image: {
-      type: String,
-    },
+    // image: {
+    //   type: String,
+    // },
     tools: {
       type: [String],
       required: [true, 'Please add a tools'],
