@@ -1,7 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { uploadResume, updateResume, deleteResume, getResume, getAllResumes } = require('../controllers/resumeController');
+const {
+    generateATSResume,
+    uploadResume,
+    updateResume,
+    deleteResume,
+    getResume,
+    getAllResumes
+} = require('../controllers/resumeController');
 
 // Multer memory storage configuration (keeps file in memory buffer)
 const storage = multer.memoryStorage();
@@ -16,6 +23,10 @@ const upload = multer({
         }
     }
 });
+
+// GET: Generate ATS-Friendly PDF Resume
+// URL: http://localhost:5000/api/resumes/generate-ats
+router.get('/generate-ats', generateATSResume);
 
 // POST: Upload Resume
 // URL: http://localhost:5000/api/resumes/
@@ -37,4 +48,4 @@ router.get('/:id', getResume);
 // URL: http://localhost:5000/api/resumes
 router.get('/', getAllResumes);
 
-module.exports = router;
+module.exports = router;
