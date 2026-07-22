@@ -35,12 +35,21 @@ const drawSectionHeader = (doc, title, margin, contentWidth) => {
 // @route   GET /api/resumes/generate-ats
 const generateATSResume = async (req, res) => {
   try {
+    // const [contact, experiences, skills, projects, educations, services] = await Promise.all([
+    //   Contact.findOne(),
+    //   Experience.find().sort({ createdAt: -1 }),
+    //   Skill.find(),
+    //   Project.find().sort({ completedYear: -1, createdAt: -1 }),
+    //   Education.find().sort({ createdAt: -1 }),
+    //   Service.find()
+    // ]);
+
     const [contact, experiences, skills, projects, educations, services] = await Promise.all([
       Contact.findOne(),
-      Experience.find().sort({ createdAt: -1 }),
+      Experience.find(),
       Skill.find(),
-      Project.find().sort({ completedYear: -1, createdAt: -1 }),
-      Education.find().sort({ createdAt: -1 }),
+      Project.find(),
+      Education.find(),
       Service.find()
     ]);
 
