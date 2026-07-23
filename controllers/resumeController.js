@@ -140,7 +140,7 @@ const generateATSResume = async (req, res) => {
     doc.moveDown(0.4);
 
     // --- 2. EXPERIENCE ---
-    drawSectionHeader(doc, 'Experience', margin, contentWidth);
+    drawSectionHeader(doc, 'Professional Experience', margin, contentWidth);
     if (experiences && experiences.length > 0) {
       experiences.forEach((exp) => {
         if (doc.y > doc.page.height - 80) doc.addPage();
@@ -204,7 +204,7 @@ const generateATSResume = async (req, res) => {
     }
 
     // --- 4. PROJECT ---
-    drawSectionHeader(doc, 'Projects', margin, contentWidth);
+    drawSectionHeader(doc, 'Key Projects', margin, contentWidth);
     if (projects && projects.length > 0) {
       projects.forEach((proj) => {
         if (doc.y > doc.page.height - 80) doc.addPage();
