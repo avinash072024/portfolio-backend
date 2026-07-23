@@ -6,27 +6,71 @@ const Project = require('../models/Project');
 const Education = require('../models/Education');
 const Service = require('../models/Service');
 const PDFDocument = require('pdfkit');
+const path = require('path');
+const fs = require('fs');
+
+// Register Cambria font or fallback to standard fonts
+const registerFonts = (doc) => {
+  const localFontDir = path.join(__dirname, '../assets/fonts');
+  const winFontDir = 'C:/Windows/Fonts';
+
+  let regularPath = path.join(localFontDir, 'cambria.ttc');
+  let boldPath = path.join(localFontDir, 'cambriab.ttf');
+  let italicPath = path.join(localFontDir, 'cambriai.ttf');
+  let boldItalicPath = path.join(localFontDir, 'cambriaz.ttf');
+
+  if (!fs.existsSync(regularPath)) regularPath = path.join(winFontDir, 'cambria.ttc');
+  if (!fs.existsSync(boldPath)) boldPath = path.join(winFontDir, 'cambriab.ttf');
+  if (!fs.existsSync(italicPath)) italicPath = path.join(winFontDir, 'cambriai.ttf');
+  if (!fs.existsSync(boldItalicPath)) boldItalicPath = path.join(winFontDir, 'cambriaz.ttf');
+
+  if (fs.existsSync(regularPath) && fs.existsSync(boldPath)) {
+    try {
+      doc.registerFont('Cambria', regularPath, 'Cambria');
+      doc.registerFont('Cambria-Bold', boldPath);
+      if (fs.existsSync(italicPath)) doc.registerFont('Cambria-Italic', italicPath);
+      if (fs.existsSync(boldItalicPath)) doc.registerFont('Cambria-BoldItalic', boldItalicPath);
+
+      return {
+        regular: 'Cambria',
+        bold: 'Cambria-Bold',
+        italic: fs.existsSync(italicPath) ? 'Cambria-Italic' : 'Cambria-Bold',
+        boldItalic: fs.existsSync(boldItalicPath) ? 'Cambria-BoldItalic' : 'Cambria-Bold'
+      };
+    } catch (e) {
+      console.warn('Failed to register Cambria font, falling back to Times-Roman:', e.message);
+    }
+  }
+
+  return {
+    regular: 'Times-Roman',
+    bold: 'Times-Bold',
+    italic: 'Times-Italic',
+    boldItalic: 'Times-BoldItalic'
+  };
+};
 
 // Helper function to draw ATS section headers
-const drawSectionHeader = (doc, title, margin, contentWidth) => {
+const drawSectionHeader = (doc, title, margin, contentWidth, fonts) => {
   if (doc.y > doc.page.height - 100) {
     doc.addPage();
   } else {
     doc.moveDown(0.6);
   }
 
+  const fontBold = fonts ? fonts.bold : 'Helvetica-Bold';
   const startY = doc.y;
-  doc.font('Helvetica-Bold')
-     .fontSize(11)
-     .fillColor('#111111')
-     .text(title.toUpperCase(), margin, startY);
+  doc.font(fontBold)
+    .fontSize(11)
+    .fillColor('#111111')
+    .text(title.toUpperCase(), margin, startY);
 
   doc.moveDown(0.2);
   doc.moveTo(margin, doc.y)
-     .lineTo(margin + contentWidth, doc.y)
-     .lineWidth(0.75)
-     .strokeColor('#444444')
-     .stroke();
+    .lineTo(margin + contentWidth, doc.y)
+    .lineWidth(0.75)
+    .strokeColor('#444444')
+    .stroke();
 
   doc.moveDown(0.4);
 };
@@ -35,15 +79,6 @@ const drawSectionHeader = (doc, title, margin, contentWidth) => {
 // @route   GET /api/resumes/generate-ats
 const generateATSResume = async (req, res) => {
   try {
-    // const [contact, experiences, skills, projects, educations, services] = await Promise.all([
-    //   Contact.findOne(),
-    //   Experience.find().sort({ createdAt: -1 }),
-    //   Skill.find(),
-    //   Project.find().sort({ completedYear: -1, createdAt: -1 }),
-    //   Education.find().sort({ createdAt: -1 }),
-    //   Service.find()
-    // ]);
-
     const [contact, experiences, skills, projects, educations, services] = await Promise.all([
       Contact.findOne(),
       Experience.find(),
@@ -64,6 +99,8 @@ const generateATSResume = async (req, res) => {
       }
     });
 
+    const fonts = registerFonts(doc);
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
@@ -78,15 +115,15 @@ const generateATSResume = async (req, res) => {
     // --- HEADER / CONTACT INFO ---
     if (contact) {
       const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim().toUpperCase();
-      doc.font('Helvetica-Bold')
-         .fontSize(16)
-         .fillColor('#000000')
-         .text(fullName || 'RESUME', { align: 'center' });
+      doc.font(fonts.bold)
+        .fontSize(16)
+        .fillColor('#000000')
+        .text(fullName || 'RESUME', { align: 'center' });
 
-      doc.font('Helvetica')
-         .fontSize(10)
-         .fillColor('#000000')
-         .text('Senior Software Engineer | Angular Developer', { align: 'center' });
+      doc.font(fonts.regular)
+        .fontSize(10)
+        .fillColor('#000000')
+        .text('Senior Software Engineer | Angular Developer', { align: 'center' });
       doc.moveDown(0.3);
 
       const contactDetails = [
@@ -96,10 +133,10 @@ const generateATSResume = async (req, res) => {
       ].filter(Boolean).join('  |  ');
 
       if (contactDetails) {
-        doc.font('Helvetica')
-           .fontSize(9.5)
-           .fillColor('#333333')
-           .text(contactDetails, { align: 'center' });
+        doc.font(fonts.regular)
+          .fontSize(9.5)
+          .fillColor('#333333')
+          .text(contactDetails, { align: 'center' });
       }
 
       const links = [
@@ -109,24 +146,25 @@ const generateATSResume = async (req, res) => {
 
       if (links) {
         doc.moveDown(0.15);
-        doc.font('Helvetica')
-           .fontSize(9)
-           .fillColor('#0056b3')
-           .text(links, { align: 'center' });
+        doc.font(fonts.regular)
+          .fontSize(9)
+          .fillColor('#0056b3')
+          .text(links, { align: 'center' });
       }
       doc.moveDown(0.4);
     } else {
-      doc.font('Helvetica-Bold')
-         .fontSize(18)
-         .fillColor('#000000')
-         .text('RESUME', { align: 'center' });
+      doc.font(fonts.bold)
+        .fontSize(18)
+        .fillColor('#000000')
+        .text('RESUME', { align: 'center' });
       doc.moveDown(0.4);
     }
 
     // --- 1. PROFILE SUMMARY ---
-    drawSectionHeader(doc, 'Professional Summary', margin, contentWidth);
-    doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
+    drawSectionHeader(doc, 'Professional Summary', margin, contentWidth, fonts);
+    doc.font(fonts.regular).fontSize(9.5).fillColor('#222222');
 
+    // let summaryText = 'Experienced Front-End Developer with 4 years of expertise, including 1 year in UI Development and 3 years in Angular Development. Skilled in creating dynamic, user-friendly web applications with a focus on performance and scalability. Proficient in leveraging Angular to build robust, efficient, and maintainable code. Adept at collaborating with cross-functional teams to deliver high-quality software solutions.';
     let summaryText = 'Results-driven technical professional with comprehensive experience in designing, building, and maintaining scalable web applications and software solutions. Demonstrated expertise in front-end and back-end architectures, database design, API integrations, and delivering high-impact technical services.';
 
     if (services && services.length > 0) {
@@ -140,7 +178,7 @@ const generateATSResume = async (req, res) => {
     doc.moveDown(0.4);
 
     // --- 2. EXPERIENCE ---
-    drawSectionHeader(doc, 'Experience', margin, contentWidth);
+    drawSectionHeader(doc, 'Professional Experience', margin, contentWidth, fonts);
     if (experiences && experiences.length > 0) {
       experiences.forEach((exp) => {
         if (doc.y > doc.page.height - 80) doc.addPage();
@@ -149,26 +187,26 @@ const generateATSResume = async (req, res) => {
         const titleText = `${exp.title || ''}${exp.company ? ' - ' + exp.company : ''}`;
         const durationText = exp.duration || '';
 
-        doc.font('Helvetica-Bold').fontSize(10);
+        doc.font(fonts.bold).fontSize(10);
         const titleHeight = doc.heightOfString(titleText, { width: contentWidth - 120 });
-        doc.font('Helvetica-Oblique').fontSize(9);
+        doc.font(fonts.italic).fontSize(9);
         const durationHeight = doc.heightOfString(durationText, { width: 120 });
 
-        doc.font('Helvetica-Bold')
-           .fontSize(10)
-           .fillColor('#000000')
-           .text(titleText, margin, currentY, { width: contentWidth - 120 });
+        doc.font(fonts.bold)
+          .fontSize(10)
+          .fillColor('#000000')
+          .text(titleText, margin, currentY, { width: contentWidth - 120 });
 
-        doc.font('Helvetica-Oblique')
-           .fontSize(9)
-           .fillColor('#555555')
-           .text(durationText, margin, currentY, { width: contentWidth, align: 'right' });
+        doc.font(fonts.italic)
+          .fontSize(9)
+          .fillColor('#555555')
+          .text(durationText, margin, currentY, { width: contentWidth, align: 'right' });
 
         doc.y = currentY + Math.max(titleHeight, durationHeight);
         doc.moveDown(0.25);
 
         if (exp.description) {
-          doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
+          doc.font(fonts.regular).fontSize(9.5).fillColor('#222222');
           const lines = exp.description.split('\n').filter(line => line.trim().length > 0);
           lines.forEach(line => {
             const cleanLine = line.replace(/^[-•*]\s*/, '');
@@ -178,11 +216,11 @@ const generateATSResume = async (req, res) => {
         doc.moveDown(0.4);
       });
     } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No experience entries available.');
+      doc.font(fonts.italic).fontSize(9.5).fillColor('#555555').text('No experience entries available.');
     }
 
     // --- 3. TECHNOLOGY STACK ---
-    drawSectionHeader(doc, 'Technology Stack', margin, contentWidth);
+    drawSectionHeader(doc, 'Technology Stack', margin, contentWidth, fonts);
     if (skills && skills.length > 0) {
       const skillGroups = {};
       skills.forEach(sk => {
@@ -191,29 +229,29 @@ const generateATSResume = async (req, res) => {
         if (sk.name) skillGroups[cat].push(sk.name);
       });
 
-      doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
+      doc.font(fonts.regular).fontSize(9.5).fillColor('#222222');
       Object.keys(skillGroups).forEach(category => {
         if (doc.y > doc.page.height - 60) doc.addPage();
 
-        doc.font('Helvetica-Bold').text(`${category}: `, { continued: true })
-           .font('Helvetica').text(skillGroups[category].join(', '));
+        doc.font(fonts.bold).text(`${category}: `, { continued: true })
+          .font(fonts.regular).text(skillGroups[category].join(', '));
         doc.moveDown(0.2);
       });
     } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No skills listed.');
+      doc.font(fonts.italic).fontSize(9.5).fillColor('#555555').text('No skills listed.');
     }
 
     // --- 4. PROJECT ---
-    drawSectionHeader(doc, 'Projects', margin, contentWidth);
+    drawSectionHeader(doc, 'Key Projects', margin, contentWidth, fonts);
     if (projects && projects.length > 0) {
       projects.forEach((proj) => {
         if (doc.y > doc.page.height - 80) doc.addPage();
 
         const currentY = doc.y;
-        doc.font('Helvetica-Bold')
-           .fontSize(10)
-           .fillColor('#000000')
-           .text(`${proj.title || ''}${proj.completedYear ? ' (' + proj.completedYear + ')' : ''}`, margin, currentY);
+        doc.font(fonts.bold)
+          .fontSize(10)
+          .fillColor('#000000')
+          .text(`${proj.title || ''}${proj.completedYear ? ' (' + proj.completedYear + ')' : ''}`, margin, currentY);
 
         if (proj.category || proj.clientName) {
           const metaInfo = [
@@ -222,21 +260,21 @@ const generateATSResume = async (req, res) => {
             proj.teamSize ? `Team Size: ${proj.teamSize}` : ''
           ].filter(Boolean).join(' | ');
 
-          doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#444444').text(metaInfo);
+          doc.font(fonts.italic).fontSize(8.5).fillColor('#444444').text(metaInfo);
         }
 
         if (proj.tools && (Array.isArray(proj.tools) ? proj.tools.length > 0 : proj.tools)) {
           const toolsStr = Array.isArray(proj.tools) ? proj.tools.join(', ') : proj.tools;
-          doc.font('Helvetica-Bold').fontSize(9).fillColor('#222222').text('Technologies: ', { continued: true })
-             .font('Helvetica').text(toolsStr);
+          doc.font(fonts.bold).fontSize(9).fillColor('#222222').text('Technologies: ', { continued: true })
+            .font(fonts.regular).text(toolsStr);
         }
 
         if (proj.link) {
-          doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#0056b3').text(`Link: ${proj.link}`);
+          doc.font(fonts.bold).fontSize(8.5).fillColor('#0056b3').text(`Link: ${proj.link}`);
         }
 
         if (proj.desc) {
-          doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
+          doc.font(fonts.regular).fontSize(9.5).fillColor('#222222');
           const descList = Array.isArray(proj.desc) ? proj.desc : String(proj.desc).split('\n');
           descList.forEach(d => {
             if (d && d.trim()) {
@@ -248,11 +286,11 @@ const generateATSResume = async (req, res) => {
         doc.moveDown(0.4);
       });
     } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No projects listed.');
+      doc.font(fonts.italic).fontSize(9.5).fillColor('#555555').text('No projects listed.');
     }
 
     // --- 5. EDUCATIONS ---
-    drawSectionHeader(doc, 'Educations', margin, contentWidth);
+    drawSectionHeader(doc, 'Educations', margin, contentWidth, fonts);
     if (educations && educations.length > 0) {
       educations.forEach((edu) => {
         if (doc.y > doc.page.height - 60) doc.addPage();
@@ -261,34 +299,34 @@ const generateATSResume = async (req, res) => {
         const eduText = `• ${edu.title || ''}${edu.institution ? ' - ' + edu.institution : ''}`;
         const durationText = edu.duration || '';
 
-        doc.font('Helvetica').fontSize(10);
+        doc.font(fonts.regular).fontSize(10);
         const eduHeight = doc.heightOfString(eduText, { width: contentWidth - 120 });
-        doc.font('Helvetica-Oblique').fontSize(9);
+        doc.font(fonts.italic).fontSize(9);
         const durationHeight = doc.heightOfString(durationText, { width: 120 });
 
-        doc.font('Helvetica')
-           .fontSize(10)
-           .fillColor('#000000')
-           .text(eduText, margin, currentY, { width: contentWidth - 120 });
+        doc.font(fonts.regular)
+          .fontSize(10)
+          .fillColor('#000000')
+          .text(eduText, margin, currentY, { width: contentWidth - 120 });
 
-        doc.font('Helvetica-Oblique')
-           .fontSize(9)
-           .fillColor('#555555')
-           .text(durationText, margin, currentY, { width: contentWidth, align: 'right' });
+        doc.font(fonts.italic)
+          .fontSize(9)
+          .fillColor('#555555')
+          .text(durationText, margin, currentY, { width: contentWidth, align: 'right' });
 
         doc.y = currentY + Math.max(eduHeight, durationHeight);
         doc.moveDown(0.3);
       });
     } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No education records available.');
+      doc.font(fonts.italic).fontSize(9.5).fillColor('#555555').text('No education records available.');
     }
 
     // --- 6. LANGUAGES ---
-    drawSectionHeader(doc, 'Languages', margin, contentWidth);
-    doc.font('Helvetica').fontSize(9.5).fillColor('#222222')
-       .text('•  English (Professional Working Proficiency)', { indent: 8 })
-       .text('•  Hindi (Full Professional Proficiency)', { indent: 8 })
-       .text('•  Marathi (Native / Bilingual Proficiency)', { indent: 8 });
+    drawSectionHeader(doc, 'Languages', margin, contentWidth, fonts);
+    doc.font(fonts.regular).fontSize(9.5).fillColor('#222222')
+      .text('•  English (Professional Working Proficiency)', { indent: 8 })
+      .text('•  Hindi (Full Professional Proficiency)', { indent: 8 })
+      .text('•  Marathi (Native / Bilingual Proficiency)', { indent: 8 });
 
     // End PDF creation and send response stream
     doc.end();
@@ -306,7 +344,7 @@ const generateATSResume = async (req, res) => {
 const getAllResumes = async (req, res) => {
   try {
     const resumes = await Resume.find({}).sort({ createdAt: -1 });
-    if(!resumes.length) {
+    if (!resumes.length) {
       return res.status(200).json({ success: false, message: 'No resumes found' });
     }
     res.status(200).json({ success: true, resumes });
@@ -318,89 +356,89 @@ const getAllResumes = async (req, res) => {
 // @desc    Upload a new resume
 // @route   POST /api/resumes
 const uploadResume = async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'Please upload a PDF file' });
-        }
-
-        // Convert file buffer to Base64 string
-        const base64Str = req.file.buffer.toString('base64');
-
-        const newResume = new Resume({
-            title: req.body.title || 'Untitled Resume',
-            fileName: req.file.originalname,
-            contentType: req.file.mimetype,
-            pdfData: base64Str,
-        });
-
-        await newResume.save();
-        res.status(201).json({ success: true, message: 'Resume uploaded successfully', resumeId: newResume._id });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a PDF file' });
     }
+
+    // Convert file buffer to Base64 string
+    const base64Str = req.file.buffer.toString('base64');
+
+    const newResume = new Resume({
+      title: req.body.title || 'Untitled Resume',
+      fileName: req.file.originalname,
+      contentType: req.file.mimetype,
+      pdfData: base64Str,
+    });
+
+    await newResume.save();
+    res.status(201).json({ success: true, message: 'Resume uploaded successfully', resumeId: newResume._id });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
 };
 
 // @desc    Update/Edit an existing resume (Metadata or File)
 // @route   PUT /api/resumes/:id
 const updateResume = async (req, res) => {
-    try {
-        const { id } = req.params;
-        let updateData = { title: req.body.title };
+  try {
+    const { id } = req.params;
+    let updateData = { title: req.body.title };
 
-        // If a new file is uploaded, convert it to Base64 and update fields
-        if (req.file) {
-            updateData.pdfData = req.file.buffer.toString('base64');
-            updateData.fileName = req.file.originalname;
-            updateData.contentType = req.file.mimetype;
-        }
-
-        const updatedResume = await Resume.findByIdAndUpdate(id, updateData, { new: true });
-
-        if (!updatedResume) {
-            return res.status(404).json({ success: false, message: 'Resume not found' });
-        }
-
-        res.status(200).json({ success: true, message: 'Resume updated successfully', resumeId: updatedResume._id });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    // If a new file is uploaded, convert it to Base64 and update fields
+    if (req.file) {
+      updateData.pdfData = req.file.buffer.toString('base64');
+      updateData.fileName = req.file.originalname;
+      updateData.contentType = req.file.mimetype;
     }
+
+    const updatedResume = await Resume.findByIdAndUpdate(id, updateData, { new: true });
+
+    if (!updatedResume) {
+      return res.status(404).json({ success: false, message: 'Resume not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'Resume updated successfully', resumeId: updatedResume._id });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
 };
 
 // @desc    Delete a resume
 // @route   DELETE /api/resumes/:id
 const deleteResume = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const deletedResume = await Resume.findByIdAndDelete(id);
+  try {
+    const { id } = req.params;
+    const deletedResume = await Resume.findByIdAndDelete(id);
 
-        if (!deletedResume) {
-            return res.status(404).json({ success: false, message: 'Resume not found' });
-        }
-
-        res.status(200).json({ success: true, message: 'Resume deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    if (!deletedResume) {
+      return res.status(404).json({ success: false, message: 'Resume not found' });
     }
+
+    res.status(200).json({ success: true, message: 'Resume deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
 };
 
 // @desc    Get a resume by ID (Optional: Useful for viewing/downloading)
 // @route   GET /api/resumes/:id
 const getResume = async (req, res) => {
-    try {
-        const resume = await Resume.findById(req.params.id);
-        if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
+  try {
+    const resume = await Resume.findById(req.params.id);
+    if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
 
-        res.status(200).json({ success: true, resume });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
-    }
+    res.status(200).json({ success: true, resume });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
 };
 
 module.exports = {
-    generateATSResume,
-    uploadResume,
-    updateResume,
-    deleteResume,
-    getResume,
-    getAllResumes
+  generateATSResume,
+  uploadResume,
+  updateResume,
+  deleteResume,
+  getResume,
+  getAllResumes
 };
