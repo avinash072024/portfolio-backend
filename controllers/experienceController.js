@@ -4,24 +4,6 @@ const cache = require('../utils/cache');
 // @desc    Get all experiences
 // @route   GET /api/experience
 // @access  Public
-// const getExperiences = async (req, res) => {
-//   try {
-//     const cacheKey = `experiences:${req.originalUrl}`;
-//     const cached = cache.get(cacheKey);
-//     if (cached) return res.status(200).json(cached);
-
-//     const experiences = await Experience.find();
-//     const resp = {
-//       success: true,
-//       count: experiences.length,
-//       experiences
-//     };
-//     cache.set(cacheKey, resp, 30);
-//     res.status(200).json(resp);
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 const getExperiences = async (req, res) => {
   try {
     const cacheKey = `experiences:${req.originalUrl}`;
@@ -30,34 +12,35 @@ const getExperiences = async (req, res) => {
 
     const experiences = await Experience.find();
 
-    // 🔥 Calculate total experience
     let totalMonths = 0;
 
     experiences.forEach(exp => {
-      if (exp.duration) {
+      if (exp.duration && exp.duration.includes('-')) {
         const parts = exp.duration.split('-').map(p => p.trim());
 
-        let startYear = parseInt(parts[0]);
-        let endYear;
+        const startDate = parseDate(parts[0]);
+        const endDate = parseDate(parts[1]);
 
-        if (parts[1].toLowerCase() === 'present') {
-          endYear = new Date().getFullYear();
-        } else {
-          endYear = parseInt(parts[1]);
-        }
+        if (startDate && endDate) {
+          // Calculate months between start and end date
+          const yearDiff = endDate.getFullYear() - startDate.getFullYear();
+          const monthDiff = endDate.getMonth() - startDate.getMonth();
+          const durationMonths = (yearDiff * 12) + monthDiff;
 
-        if (!isNaN(startYear) && !isNaN(endYear)) {
-          totalMonths += (endYear - startYear) * 12;
+          if (durationMonths > 0) {
+            totalMonths += durationMonths;
+          }
         }
       }
     });
 
-    const totalYears = Math.round(totalMonths / 12);
+    // Convert total months to years rounded to 1 decimal place
+    const totalYears = Number((totalMonths / 12).toFixed(1));
 
     const resp = {
       success: true,
       count: experiences.length,
-      totalExperience: totalYears, // 👈 added
+      totalExperience: totalYears, // e.g. 4.5
       experiences
     };
 
@@ -67,6 +50,19 @@ const getExperiences = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// Helper function to parse "Jan 2021", "Mar 2024", or "Present"
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  const cleanStr = dateStr.trim();
+
+  if (cleanStr.toLowerCase() === 'present') {
+    return new Date();
+  }
+
+  const parsed = new Date(cleanStr);
+  return isNaN(parsed.getTime()) ? null : parsed;
 };
 
 // @desc    Get single experience
