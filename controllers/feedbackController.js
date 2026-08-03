@@ -1,5 +1,6 @@
 const Feedback = require('../models/Feedback');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all feedback
 // @route   GET /api/feedback
@@ -89,6 +90,7 @@ const createFeedback = async (req, res) => {
       verified: false,
     });
     cache.flush();
+    emit('refresh-data', { resource: 'feedback', action: 'create', feedbackId: feedback._id });
     res.status(201).json({ success: true, message: 'Feedback created successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -115,6 +117,7 @@ const updateFeedback = async (req, res) => {
     );
 
     cache.flush();
+    emit('refresh-data', { resource: 'feedback', action: 'update', feedbackId: updatedFeedback._id });
     res.status(200).json({ success: true, message: 'Feedback updated successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -145,6 +148,7 @@ const updateFeedbackVerified = async (req, res) => {
     await feedback.save();
 
     cache.flush();
+    emit('refresh-data', { resource: 'feedback', action: 'verify', feedbackId: feedback._id, verified });
     res.status(200).json({
       success: true,
       message: 'Feedback verification status updated successfully',
@@ -168,6 +172,7 @@ const deleteFeedback = async (req, res) => {
 
     await feedback.deleteOne();
     cache.flush();
+    emit('refresh-data', { resource: 'feedback', action: 'delete', feedbackId: feedback._id });
     res.status(200).json({ success: true, message: 'Feedback deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -194,6 +199,7 @@ const deleteMultipleFeedbacks = async (req, res) => {
     const deleteCount = `${result.deletedCount}` === '1' ? 'feedback' : 'feedbacks';
 
     cache.flush();
+    emit('refresh-data', { resource: 'feedback', action: 'deleteMany', deletedCount: result.deletedCount });
     res.status(200).json({
       success: true,
       message: `${result.deletedCount} ${deleteCount} deleted successfully`,
@@ -232,6 +238,7 @@ const updateMultipleFeedbackVerified = async (req, res) => {
     }
 
     cache.flush();
+    emit('refresh-data', { resource: 'feedback', action: 'verifyMany', matchedCount: result.matchedCount, modifiedCount: result.modifiedCount });
     res.status(200).json({
       success: true,
       message: `${result.modifiedCount} feedback verification status updated successfully`,

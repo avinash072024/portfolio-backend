@@ -1,5 +1,6 @@
 const Service = require('../models/Service');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all services
 // @route   GET /api/services
@@ -82,6 +83,7 @@ const createService = async (req, res) => {
   try {
     const service = await Service.create(req.body);
     cache.flush();
+    emit('refresh-data', { resource: 'service', action: 'create', serviceId: service._id });
     res.status(201).json({ success: true, message: 'Service created successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -106,6 +108,7 @@ const updateService = async (req, res) => {
     );
 
     cache.flush();
+    emit('refresh-data', { resource: 'service', action: 'update', serviceId: updatedService._id });
     res.status(200).json({ success: true, message: 'Service updated successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -126,6 +129,7 @@ const deleteService = async (req, res) => {
     await service.deleteOne();
 
     cache.flush();
+    emit('refresh-data', { resource: 'service', action: 'delete', serviceId: service._id });
     res.status(200).json({ success: true, message: 'Service deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -152,6 +156,7 @@ const deleteMultipleServices = async (req, res) => {
     const deleteCount = `${result.deletedCount}` === '1' ? 'service' : 'services';
 
     cache.flush();
+    emit('refresh-data', { resource: 'service', action: 'deleteMany', deletedCount: result.deletedCount });
     // res.status(200).json({
     //   success: true,
     //   message: `${result.deletedCount} service(s) deleted successfully`,

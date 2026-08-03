@@ -1,5 +1,6 @@
 const Visitor = require('../models/Visitor');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Save visitor data
 // @route   POST /api/visitor/log
@@ -26,6 +27,7 @@ const saveVisitorData = async (req, res) => {
 
     // clear caches so admin list reflects new visitor
     cache.flush();
+    emit('refresh-data', { resource: 'visitor', action: 'create', visitorId: visitor._id });
 
     res.status(201).json({
       success: true,
@@ -149,6 +151,7 @@ const deleteDuplicateVisitors = async (req, res) => {
 
       // Clear your cache so the admin dashboard reflects changes immediately
       cache.flush();
+      emit('refresh-data', { resource: 'visitor', action: 'deleteMany', deletedCount: totalDeleted });
     }
 
     res.status(200).json({

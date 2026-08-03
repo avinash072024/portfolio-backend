@@ -1,5 +1,6 @@
 const ProjectCategory = require('../models/ProjectCategory');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all categories (with and without pagination)
 // @route   GET /api/project-categories
@@ -67,6 +68,7 @@ const createCategory = async (req, res) => {
   try {
     const category = await ProjectCategory.create(req.body);
     cache.flush();
+    emit('refresh-data', { resource: 'project-category', action: 'create', categoryId: category._id });
     res.status(201).json({ success: true, message: 'Category created successfully', category });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -81,8 +83,9 @@ const updateCategory = async (req, res) => {
     const category = await ProjectCategory.findById(req.params.id);
     if (!category) return res.status(404).json({ success: false, message: 'Category not found' });
 
-    await ProjectCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedCategory = await ProjectCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
     cache.flush();
+    emit('refresh-data', { resource: 'project-category', action: 'update', categoryId: updatedCategory._id });
     res.status(200).json({ success: true, message: 'Category updated successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -99,6 +102,7 @@ const deleteCategory = async (req, res) => {
 
     await category.deleteOne();
     cache.flush();
+    emit('refresh-data', { resource: 'project-category', action: 'delete', categoryId: category._id });
     res.status(200).json({ success: true, message: 'Category removed' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

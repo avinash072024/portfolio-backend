@@ -1,8 +1,11 @@
+const http = require('http');
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const compression = require('compression');
+const { Server } = require('socket.io');
 const connectDB = require('./config/db');
+const { setIo } = require('./utils/socket');
 const projectRoutes = require('./routes/projectRoutes');
 const projectCategoryRoutes = require('./routes/projectCategoryRoutes');
 const skillRoutes = require('./routes/skillRoutes');
@@ -26,6 +29,26 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+
+// Socket.IO setup
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  },
+});
+setIo(io);
+
+io.on('connection', (socket) => {
+  console.log('Socket connected:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected:', socket.id);
+  });
+});
+
+// attach io to app so controllers can use it via req.app.get('io')
+app.set('io', io);
 
 // Middleware
 app.use(cors());
@@ -57,4 +80,4 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`Server running on port: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port: http://localhost:${PORT}`));

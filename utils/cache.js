@@ -8,5 +8,7 @@ module.exports = {
   get: (key) => cache.get(key),
   set: (key, value, ttl = defaultTtl) => cache.set(key, value, ttl),
   del: (key) => cache.del(key),
-  flush: () => cache.flushAll(),
+  flush: () => {
+    cache.flushAll();
+  },
 };

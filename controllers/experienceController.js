@@ -1,5 +1,6 @@
 const Experience = require('../models/Experience');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all experiences
 // @route   GET /api/experience
@@ -99,6 +100,7 @@ const createExperience = async (req, res) => {
     });
 
     cache.flush();
+    emit('refresh-data', { resource: 'experience', action: 'create', experienceId: experience._id });
     res.status(201).json({ success: true, message: 'Experience created successfully', data: experience });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -123,6 +125,7 @@ const updateExperience = async (req, res) => {
     );
 
     cache.flush();
+    emit('refresh-data', { resource: 'experience', action: 'update', experienceId: updatedExperience._id });
     res.status(200).json({ success: true, message: 'Experience updated successfully', data: updatedExperience });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -143,6 +146,7 @@ const deleteExperience = async (req, res) => {
     await experience.deleteOne();
 
     cache.flush();
+    emit('refresh-data', { resource: 'experience', action: 'delete', experienceId: experience._id });
     res.status(200).json({ success: true, message: 'Experience deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

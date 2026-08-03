@@ -1,4 +1,5 @@
 const Contact = require('../models/Contact');
+const { emit } = require('../utils/socket');
 
 // @desc    Get contact details
 // @route   GET /api/contact
@@ -29,10 +30,12 @@ const updateContact = async (req, res) => {
         req.body,
         { new: true, runValidators: true }
       );
+      emit('refresh-data', { resource: 'contact', action: 'update' });
       res.status(200).json({ success: true, message: 'Contact details updated successfully', contact });
     } else {
       // Create new
       contact = await Contact.create(req.body);
+      emit('refresh-data', { resource: 'contact', action: 'create' });
       res.status(201).json({ success: true, message: 'Contact details created successfully', contact });
     }
   } catch (error) {

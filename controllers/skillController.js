@@ -1,5 +1,6 @@
 const Skill = require('../models/Skill');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all skills
 // @route   GET /api/skills
@@ -84,6 +85,7 @@ const createSkill = async (req, res) => {
   try {
     const skill = await Skill.create(req.body);
     cache.flush();
+    emit('refresh-data', { resource: 'skill', action: 'create', skillId: skill._id });
     res.status(201).json({ success: true, message: 'Skill created successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -108,6 +110,7 @@ const updateSkill = async (req, res) => {
     );
 
     cache.flush();
+    emit('refresh-data', { resource: 'skill', action: 'update', skillId: updatedSkill._id });
     res.status(200).json({ success: true, message: 'Skill updated successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -127,6 +130,7 @@ const deleteSkill = async (req, res) => {
 
     await skill.deleteOne();
     cache.flush();
+    emit('refresh-data', { resource: 'skill', action: 'delete', skillId: skill._id });
     res.status(200).json({ success: true, message: 'Skill removed' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -153,6 +157,7 @@ const deleteMultipleSkills = async (req, res) => {
     const deleteCount = `${result.deletedCount}` === '1' ? 'skill' : 'skills';
 
     cache.flush();
+    emit('refresh-data', { resource: 'skill', action: 'deleteMany', deletedCount: result.deletedCount });
     res.status(200).json({
       success: true,
       message: `${result.deletedCount} ${deleteCount} deleted successfully`,

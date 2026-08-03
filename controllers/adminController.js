@@ -1,5 +1,6 @@
 const Admin = require('../models/Admin');
 const jwt = require('jsonwebtoken');
+const { emit } = require('../utils/socket');
 
 // Generate JWT token
 const generateToken = (id, name, email) => {
@@ -56,6 +57,7 @@ const addAdmin = async (req, res) => {
     });
 
     if (admin) {
+      emit('refresh-data', { resource: 'admin', action: 'create', adminId: admin._id });
       res.status(201).json({
         success: true,
         message: "User created successfully",
@@ -107,6 +109,7 @@ const updateAdmin = async (req, res) => {
 
       const updatedAdmin = await admin.save();
 
+      emit('refresh-data', { resource: 'admin', action: 'update' });
       res.json({
         success: true,
         message: 'User updated successfully',
@@ -134,6 +137,7 @@ const deleteAdmin = async (req, res) => {
 
     if (admin) {
       await Admin.deleteOne({ _id: admin._id });
+      emit('refresh-data', { resource: 'admin', action: 'delete' });
       res.json({ message: 'User removed' });
     } else {
       res.status(404).json({ message: 'User not found' });

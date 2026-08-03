@@ -1,5 +1,6 @@
 const Education = require('../models/Education');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all education records
 // @route   GET /api/education
@@ -57,6 +58,7 @@ const createEducation = async (req, res) => {
     });
 
     cache.flush();
+    emit('refresh-data', { resource: 'education', action: 'create', educationId: education._id });
     res.status(201).json({ success: true, message: 'Education created successfully', data: education });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -81,6 +83,7 @@ const updateEducation = async (req, res) => {
     );
 
     cache.flush();
+    emit('refresh-data', { resource: 'education', action: 'update', educationId: updatedEducation._id });
     res.status(200).json({ success: true, message: 'Education updated successfully', data: updatedEducation });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -101,6 +104,7 @@ const deleteEducation = async (req, res) => {
     await education.deleteOne();
 
     cache.flush();
+    emit('refresh-data', { resource: 'education', action: 'delete', educationId: education._id });
     res.status(200).json({ success: true, message: 'Education deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

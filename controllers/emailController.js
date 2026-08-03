@@ -1,5 +1,6 @@
 const Email = require('../models/Email');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all emails
 // @route   GET /api/emails
@@ -108,6 +109,7 @@ const createMails = async (req, res) => {
     });
     
     cache.flush();
+    emit('refresh-data', { resource: 'email', action: 'create', emailId: emailData._id });
     res.status(201).json({ success: true, message: 'Messege sent successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -127,6 +129,7 @@ const deleteEmail = async (req, res) => {
 
     await email.deleteOne();
     cache.flush();
+    emit('refresh-data', { resource: 'email', action: 'delete', emailId: email._id });
     res.status(200).json({ success: true, message: 'Email deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -153,6 +156,7 @@ const deleteMultipleEmails = async (req, res) => {
     const deleteCount = `${result.deletedCount}` === '1' ? 'email' : 'emails';
 
     cache.flush();
+    emit('refresh-data', { resource: 'email', action: 'deleteMany', deletedCount: result.deletedCount });
     // res.status(200).json({
     //   success: true,
     //   message: `${result.deletedCount} email(s) deleted successfully`,

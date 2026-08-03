@@ -334,6 +334,7 @@ const uploadResume = async (req, res) => {
     });
 
     await newResume.save();
+    emit('refresh-data', { resource: 'resume', action: 'create', resumeId: newResume._id });
     res.status(201).json({ success: true, message: 'Resume uploaded successfully', resumeId: newResume._id });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
@@ -360,6 +361,7 @@ const updateResume = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Resume not found' });
     }
 
+    emit('refresh-data', { resource: 'resume', action: 'update', resumeId: updatedResume._id });
     res.status(200).json({ success: true, message: 'Resume updated successfully', resumeId: updatedResume._id });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
@@ -377,6 +379,7 @@ const deleteResume = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Resume not found' });
     }
 
+    emit('refresh-data', { resource: 'resume', action: 'delete', resumeId: deletedResume._id });
     res.status(200).json({ success: true, message: 'Resume deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error', error: error.message });

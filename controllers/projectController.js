@@ -1,5 +1,6 @@
 const Project = require('../models/Project');
 const cache = require('../utils/cache');
+const { emit } = require('../utils/socket');
 
 // @desc    Get all projects
 // @route   GET /api/projects
@@ -86,6 +87,7 @@ const createProject = async (req, res) => {
     const project = await Project.create(req.body);
     // clear caches so list endpoints show newest data
     cache.flush();
+    emit('refresh-data', { resource: 'project', action: 'create', projectId: project._id });
     res.status(201).json({ success: true, message: "Project created successfully" });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -110,6 +112,7 @@ const updateProject = async (req, res) => {
     );
 
     cache.flush();
+    emit('refresh-data', { resource: 'project', action: 'update', projectId: updatedProject._id });
     res.status(200).json({ success: true, message: "Project updated successfully" });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -129,6 +132,7 @@ const deleteProject = async (req, res) => {
 
     await project.deleteOne();
     cache.flush();
+    emit('refresh-data', { resource: 'project', action: 'delete', projectId: project._id });
     res.status(200).json({ success: true, message: 'Project removed' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -155,6 +159,7 @@ const deleteMultipleProjects = async (req, res) => {
     const deleteCount = `${result.deletedCount}` === '1' ? 'project' : 'projects';
 
     cache.flush();
+    emit('refresh-data', { resource: 'project', action: 'deleteMany', deletedCount: result.deletedCount });
     res.status(200).json({
       success: true,
       message: `${result.deletedCount} ${deleteCount} deleted successfully`,
