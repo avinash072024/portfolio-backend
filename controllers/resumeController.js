@@ -6,36 +6,54 @@ const Project = require('../models/Project');
 const Education = require('../models/Education');
 const Service = require('../models/Service');
 const PDFDocument = require('pdfkit');
+const path = require('path');
 
-// Helper function to draw ATS section headers
+
 const drawSectionHeader = (doc, title, margin, contentWidth) => {
-  if (doc.y > doc.page.height - 100) {
+  // Add a new page if there is not enough space
+  if (doc.y > doc.page.height - 70) {
     doc.addPage();
-  } else {
-    doc.moveDown(0.6);
   }
 
-  const startY = doc.y;
-  doc.font('Helvetica-Bold')
-    .fontSize(11)
-    .fillColor('#111111')
-    .text(title.toUpperCase(), margin, startY);
+  doc.moveDown(0.25);
 
-  doc.moveDown(0.2);
-  doc.moveTo(margin, doc.y)
-    .lineTo(margin + contentWidth, doc.y)
-    .lineWidth(0.75)
-    .strokeColor('#444444')
+  doc.font('Calibri-Bold')
+    .fontSize(10.5)
+    .fillColor('#000000')
+    .text(title.toUpperCase(), margin, doc.y);
+
+  doc.moveDown(0.12);
+
+  const lineY = doc.y;
+
+  doc.strokeColor('#000000')
+    .lineWidth(0.6)
+    .moveTo(margin, lineY)
+    .lineTo(margin + contentWidth, lineY)
     .stroke();
 
-  doc.moveDown(0.4);
+  doc.moveDown(0.35);
 };
 
+
+// ============================================
 // @desc    Generate ATS-Friendly PDF Resume
 // @route   GET /api/resumes/generate-ats
+// ============================================
 const generateATSResume = async (req, res) => {
   try {
-    const [contact, experiences, skills, projects, educations, services] = await Promise.all([
+
+    // ============================================
+    // FETCH ALL RESUME DATA
+    // ============================================
+    const [
+      contact,
+      experiences,
+      skills,
+      projects,
+      educations,
+      services
+    ] = await Promise.all([
       Contact.findOne(),
       Experience.find(),
       Skill.find(),
@@ -44,55 +62,138 @@ const generateATSResume = async (req, res) => {
       Service.find()
     ]);
 
+
+    // ============================================
+    // CREATE PDF DOCUMENT
+    // ============================================
     const doc = new PDFDocument({
       size: 'A4',
-      margin: 36, // 0.5 inch margin
+      margin: 36,
       info: {
-        Title: contact ? `${contact.firstName}_${contact.lastName}_Resume_Angular.pdf` : 'ATS_Resume.pdf',
-        Author: contact ? `${contact.firstName} ${contact.lastName}` : 'Portfolio Owner',
+        Title: contact
+          ? `${contact.firstName}_${contact.lastName}_Resume_Angular.pdf`
+          : 'ATS_Resume.pdf',
+
+        Author: contact
+          ? `${contact.firstName} ${contact.lastName}`
+          : 'Portfolio Owner',
+
         Subject: 'ATS Friendly Resume',
-        Keywords: 'Resume, ATS, Software Engineer, Portfolio'
+
+        Keywords:
+          'Resume, Software Engineer, Angular Developer, Portfolio'
       }
     });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="${contact ? contact.firstName + '_' + contact.lastName : 'Resume'}_Resume_Angular.pdf"`
+
+    // ============================================
+    // REGISTER CALIBRI FONTS
+    // ============================================
+    const fontPath = path.join(
+      __dirname,
+      '../assets/fonts'
     );
 
+    doc.registerFont(
+      'Calibri',
+      path.join(fontPath, 'Calibri-regular.ttf')
+    );
+
+    doc.registerFont(
+      'Calibri-Bold',
+      path.join(fontPath, 'Calibri-bold.ttf')
+    );
+
+    doc.registerFont(
+      'Calibri-Italic',
+      path.join(fontPath, 'Calibri-italic.ttf')
+    );
+
+    doc.registerFont(
+      'Calibri-BoldItalic',
+      path.join(fontPath, 'Calibri-bold-italic.ttf')
+    );
+
+    // ============================================
+    // RESPONSE HEADERS
+    // ============================================
+    res.setHeader(
+      'Content-Type',
+      'application/pdf'
+    );
+
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${contact
+        ? `${contact.firstName}_${contact.lastName}`
+        : 'Resume'
+      }_Resume_Angular.pdf"`
+    );
+
+    // ============================================
+    // PIPE PDF TO RESPONSE
+    // ============================================
     doc.pipe(res);
 
+    // ============================================
+    // PAGE SETTINGS
+    // ============================================
     const margin = 36;
-    const contentWidth = doc.page.width - margin * 2;
 
-    // --- HEADER / CONTACT INFO ---
+    const contentWidth =
+      doc.page.width - (margin * 2);
+
+    // ============================================
+    // HEADER / CONTACT INFORMATION
+    // ============================================
     if (contact) {
-      const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim().toUpperCase();
-      doc.font('Helvetica-Bold')
-        .fontSize(16)
-        .fillColor('#000000')
-        .text(fullName || 'RESUME', { align: 'center' });
 
-      doc.font('Helvetica')
-        .fontSize(10)
+      const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim().toUpperCase();
+
+      // NAME
+      doc.font('Calibri-Bold')
+        .fontSize(18)
         .fillColor('#000000')
-        .text('Senior Software Engineer | Angular Developer', { align: 'center' });
+        .text(
+          fullName || 'RESUME',
+          {
+            align: 'center'
+          }
+        );
+
+      // JOB TITLE
+      doc.font('Calibri')
+        .fontSize(10.5)
+        .fillColor('#222222')
+        .text(
+          'Senior Software Engineer | Angular Developer',
+          {
+            align: 'center'
+          }
+        );
+
       doc.moveDown(0.3);
 
+      // CONTACT DETAILS
       const contactDetails = [
         contact.email,
         contact.phone,
         contact.address
-      ].filter(Boolean).join('  |  ');
+      ]
+        .filter(Boolean)
+        .join('  |  ');
 
       if (contactDetails) {
-        doc.font('Helvetica')
+        doc.font('Calibri')
           .fontSize(9.5)
           .fillColor('#333333')
-          .text(contactDetails, { align: 'center' });
+          .text(
+            contactDetails,
+            { align: 'center' }
+          );
       }
 
+      // LINKEDIN AND GITHUB
       const links = [
         contact.linkedin ? `LinkedIn: ${contact.linkedin}` : '',
         contact.github ? `GitHub: ${contact.github}` : ''
@@ -100,208 +201,521 @@ const generateATSResume = async (req, res) => {
 
       if (links) {
         doc.moveDown(0.15);
-        doc.font('Helvetica')
+        doc.font('Calibri')
           .fontSize(9)
           .fillColor('#0056b3')
-          .text(links, { align: 'center' });
+          .text(
+            links,
+            { align: 'center' }
+          );
       }
       doc.moveDown(0.4);
     } else {
-      doc.font('Helvetica-Bold')
+      doc.font('Calibri-Bold')
         .fontSize(18)
         .fillColor('#000000')
-        .text('RESUME', { align: 'center' });
+        .text(
+          'RESUME',
+          {
+            align: 'center'
+          }
+        );
+
       doc.moveDown(0.4);
     }
 
-    // --- 1. PROFILE SUMMARY ---
-    drawSectionHeader(doc, 'Professional Summary', margin, contentWidth);
-    doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
+    // ============================================
+    // 1. PROFESSIONAL SUMMARY
+    // ============================================
+    drawSectionHeader(
+      doc,
+      '1. Professional Summary',
+      margin,
+      contentWidth
+    );
 
-    let summaryText = 'Results-driven technical professional with comprehensive experience in designing, building, and maintaining scalable web applications and software solutions. Demonstrated expertise in front-end and back-end architectures, database design, API integrations, and delivering high-impact technical services.';
+    doc.font('Calibri')
+      .fontSize(9.5)
+      .fillColor('#222222');
+
+    let summaryText =
+      'Results-driven technical professional with comprehensive experience in designing, building, and maintaining scalable web applications and software solutions. Demonstrated expertise in front-end and back-end architectures, database design, API integrations, and delivering high-impact technical services.';
 
     if (services && services.length > 0) {
-      const serviceTitles = services.map(s => s.title).filter(Boolean).join(', ');
+
+      const serviceTitles =
+        services
+          .map(service => service.title)
+          .filter(Boolean)
+          .join(', ');
+
       if (serviceTitles) {
         summaryText += ` Core competencies include: ${serviceTitles}.`;
       }
     }
 
-    doc.text(summaryText, margin, doc.y, { align: 'justify', width: contentWidth, lineGap: 2 });
+    doc.text(
+      summaryText,
+      margin,
+      doc.y,
+      {
+        align: 'justify',
+        width: contentWidth,
+        lineGap: 2
+      }
+    );
     doc.moveDown(0.4);
 
-    // --- 2. EXPERIENCE ---
-    drawSectionHeader(doc, 'Professional Experience', margin, contentWidth);
-    if (experiences && experiences.length > 0) {
+    // ============================================
+    // 2. PROFESSIONAL EXPERIENCE
+    // ============================================
+    drawSectionHeader(
+      doc,
+      '2. Professional Experience',
+      margin,
+      contentWidth
+    );
+
+    if (
+      experiences &&
+      experiences.length > 0
+    ) {
       experiences.forEach((exp) => {
-        if (doc.y > doc.page.height - 80) doc.addPage();
+        if (
+          doc.y >
+          doc.page.height - 80
+        ) { doc.addPage(); }
 
         const currentY = doc.y;
-        const titleText = `${exp.title || ''}${exp.company ? ' - ' + exp.company : ''}`;
+
+        const titleText =
+          `${exp.title || ''}${exp.company
+            ? ` - ${exp.company}`
+            : ''
+          }`;
+
         const durationText = exp.duration || '';
 
-        doc.font('Helvetica-Bold').fontSize(10);
-        const titleHeight = doc.heightOfString(titleText, { width: contentWidth - 120 });
-        doc.font('Helvetica-Oblique').fontSize(9);
-        const durationHeight = doc.heightOfString(durationText, { width: 120 });
+        // Calculate title height
+        doc.font('Calibri-Bold').fontSize(10);
 
-        doc.font('Helvetica-Bold')
+        const titleHeight =
+          doc.heightOfString(
+            titleText, { width: contentWidth - 120 }
+          );
+
+        // Calculate duration height
+        doc.font('Calibri-Italic')
+          .fontSize(9);
+
+        const durationHeight =
+          doc.heightOfString(
+            durationText,
+            {
+              width: 120
+            }
+          );
+
+        // EXPERIENCE TITLE
+        doc.font('Calibri-Bold')
           .fontSize(10)
           .fillColor('#000000')
-          .text(titleText, margin, currentY, { width: contentWidth - 120 });
+          .text(
+            titleText,
+            margin,
+            currentY,
+            {
+              width: contentWidth - 120
+            }
+          );
 
-        doc.font('Helvetica-Oblique')
+        // EXPERIENCE DURATION
+        doc.font('Calibri-Italic')
           .fontSize(9)
           .fillColor('#555555')
-          .text(durationText, margin, currentY, { width: contentWidth, align: 'right' });
+          .text(
+            durationText,
+            margin,
+            currentY,
+            {
+              width: contentWidth,
+              align: 'right'
+            }
+          );
 
-        doc.y = currentY + Math.max(titleHeight, durationHeight);
+        // Update Y position
+        doc.y =
+          currentY +
+          Math.max(
+            titleHeight,
+            durationHeight
+          );
+
         doc.moveDown(0.25);
 
+        // EXPERIENCE DESCRIPTION
         if (exp.description) {
-          doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
-          const lines = exp.description.split('\n').filter(line => line.trim().length > 0);
-          lines.forEach(line => {
+
+          doc.font('Calibri')
+            .fontSize(9.5)
+            .fillColor('#222222');
+
+          const lines =
+            exp.description
+              .split('\n')
+              .filter(
+                line =>
+                  line.trim().length > 0
+              );
+
+          lines.forEach((line) => {
             const cleanLine = line.replace(/^[-•*]\s*/, '');
-            doc.text(`•  ${cleanLine}`, { indent: 8, width: contentWidth, lineGap: 1.5 });
+            doc.text(
+              `• ${cleanLine}`,
+              {
+                indent: 4,
+                width: contentWidth,
+                lineGap: 1.5
+              }
+            );
           });
         }
         doc.moveDown(0.4);
       });
+
     } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No experience entries available.');
+      doc.font('Calibri-Italic')
+        .fontSize(9.5)
+        .fillColor('#555555')
+        .text('No experience entries available.');
     }
 
-    // --- 3. TECHNOLOGY STACK ---
-    drawSectionHeader(doc, 'Technology Stack', margin, contentWidth);
-    if (skills && skills.length > 0) {
+    // ============================================
+    // 3. TECHNOLOGY STACK
+    // ============================================
+    drawSectionHeader(
+      doc,
+      '3. Technology Stack',
+      margin,
+      contentWidth
+    );
+
+    if (
+      skills &&
+      skills.length > 0
+    ) {
       const skillGroups = {};
-      skills.forEach(sk => {
-        const cat = sk.category || 'General';
-        if (!skillGroups[cat]) skillGroups[cat] = [];
-        if (sk.name) skillGroups[cat].push(sk.name);
+
+      skills.forEach((skill) => {
+        const category = skill.category || 'General';
+
+        if (!skillGroups[category]) {
+          skillGroups[category] = [];
+        }
+
+        if (skill.name) {
+          skillGroups[category].push(skill.name);
+        }
       });
 
-      doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
-      Object.keys(skillGroups).forEach(category => {
-        if (doc.y > doc.page.height - 60) doc.addPage();
+      Object.keys(skillGroups).forEach((category) => {
+        if (doc.y > doc.page.height - 60) {
+          doc.addPage();
+        }
 
-        doc.font('Helvetica-Bold').text(`${category}: `, { continued: true })
-          .font('Helvetica').text(skillGroups[category].join(', '));
+        // CATEGORY
+        doc.font('Calibri-Bold')
+          .fontSize(9.5)
+          .fillColor('#222222')
+          .text(
+            `${category}: `,
+            {
+              continued: true
+            }
+          );
+
+        // SKILLS
+        doc.font('Calibri')
+          .fontSize(9.5)
+          .fillColor('#222222')
+          .text(
+            skillGroups[category]
+              .join(', ')
+          );
         doc.moveDown(0.2);
       });
     } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No skills listed.');
+
+      doc.font('Calibri-Italic')
+        .fontSize(9.5)
+        .fillColor('#555555')
+        .text(
+          'No skills listed.'
+        );
     }
 
-    // --- 4. PROJECT ---
-    drawSectionHeader(doc, 'Key Projects', margin, contentWidth);
-    const onResumeProjects = projects.filter(prj => prj.showOnResume);
+
+    // ============================================
+    // 4. KEY PROJECTS
+    // ============================================
+    drawSectionHeader(
+      doc,
+      '4. Key Projects',
+      margin,
+      contentWidth
+    );
+
+    const onResumeProjects =
+      projects.filter(
+        project =>
+          project.showOnResume
+      );
+
     if (onResumeProjects && onResumeProjects.length > 0) {
-      onResumeProjects.forEach((proj) => {
-        if (doc.y > doc.page.height - 80) doc.addPage();
+      onResumeProjects.forEach(
+        (project) => {
+          if (
+            doc.y >
+            doc.page.height - 80
+          ) { doc.addPage(); }
 
-        const currentY = doc.y;
-        doc.font('Helvetica-Bold')
-          .fontSize(10)
-          .fillColor('#000000')
-          .text(`${proj.title || ''}${proj.completedYear ? ' (' + proj.completedYear + ')' : ''}`, margin, currentY);
+          const currentY = doc.y;
 
-        if (proj.category || proj.clientName) {
-          const metaInfo = [
-            proj.category ? `Category: ${proj.category}` : '',
-            proj.clientName ? `Client: ${proj.clientName}` : '',
-            proj.teamSize ? `Team Size: ${proj.teamSize}` : ''
-          ].filter(Boolean).join(' | ');
+          // PROJECT TITLE
+          doc.font('Calibri-Bold')
+            .fontSize(10)
+            .fillColor('#000000')
+            .text(
+              `${project.title || ''
+              }${project.completedYear
+                ? ` (${project.completedYear})`
+                : ''
+              }`,
+              margin,
+              currentY
+            );
+          doc.moveDown(0.2);
 
-          doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#444444').text(metaInfo);
-        }
+          // PROJECT META INFO
+          if (project.category || project.clientName) {
+            const metaInfo = [
+              project.category ? `Category: ${project.category}` : '',
+              project.clientName ? `Client: ${project.clientName}` : '',
+              project.teamSize ? `Team Size: ${project.teamSize}` : ''
+            ].filter(Boolean).join(' | ');
+            doc.font('Calibri-Italic')
+              .fontSize(8.5)
+              .fillColor('#444444')
+              .text(metaInfo);
+            doc.moveDown(0.2);
+          }
 
-        if (proj.tools && (Array.isArray(proj.tools) ? proj.tools.length > 0 : proj.tools)) {
-          const toolsStr = Array.isArray(proj.tools) ? proj.tools.join(', ') : proj.tools;
-          doc.font('Helvetica-Bold').fontSize(9).fillColor('#222222').text('Technologies: ', { continued: true })
-            .font('Helvetica').text(toolsStr);
-        }
+          // PROJECT TECHNOLOGIES
+          if (project.tools &&
+            (
+              Array.isArray(project.tools)
+                ? project.tools.length > 0
+                : project.tools
+            )
+          ) {
+            const toolsString =
+              Array.isArray(project.tools)
+                ? project.tools.join(', ')
+                : project.tools;
 
-        if (proj.link) {
-          doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#0056b3').text(`Link: ${proj.link}`);
-        }
+            doc.font('Calibri-Bold')
+              .fontSize(9)
+              .fillColor('#222222')
+              .text(
+                'Technologies: ',
+                {
+                  continued: true
+                }
+              )
+              .font('Calibri')
+              .text(
+                toolsString
+              );
+          }
 
-        if (proj.desc) {
-          doc.font('Helvetica').fontSize(9.5).fillColor('#222222');
-          const descList = Array.isArray(proj.desc) ? proj.desc : String(proj.desc).split('\n');
-          descList.forEach(d => {
-            if (d && d.trim()) {
-              const cleanD = d.replace(/^[-•*]\s*/, '');
-              doc.text(`•  ${cleanD}`, { indent: 8, width: contentWidth, lineGap: 1.5 });
-            }
-          });
-        }
-        doc.moveDown(0.4);
-      });
-    } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No projects listed.');
-    }
+          // PROJECT LINK
+          if (project.link) {
+            doc.font('Calibri-Bold')
+              .fontSize(8.5)
+              .fillColor('#0056b3')
+              .text(
+                `Link: ${project.link}`
+              );
+          }
 
-    // --- 5. EDUCATIONS ---
-    drawSectionHeader(doc, 'Educations', margin, contentWidth);
-    if (educations && educations.length > 0) {
-      educations.forEach((edu) => {
-        if (doc.y > doc.page.height - 60) doc.addPage();
+          // PROJECT DESCRIPTION
+          if (project.desc) {
+            doc.font('Calibri')
+              .fontSize(9.5)
+              .fillColor('#222222');
 
-        const currentY = doc.y;
-        const eduText = `• ${edu.title || ''}${edu.institution ? ' - ' + edu.institution : ''}`;
-        const durationText = edu.duration || '';
+            const descList =
+              Array.isArray(
+                project.desc
+              )
+                ? project.desc
+                : String(
+                  project.desc
+                ).split('\n');
 
-        doc.font('Helvetica').fontSize(10);
-        const eduHeight = doc.heightOfString(eduText, { width: contentWidth - 120 });
-        doc.font('Helvetica-Oblique').fontSize(9);
-        const durationHeight = doc.heightOfString(durationText, { width: 120 });
+            descList.forEach((description) => {
+              if (description && description.trim()) {
+                const cleanDescription = description.replace(/^[-•*]\s*/, '');
 
-        doc.font('Helvetica')
-          .fontSize(10)
-          .fillColor('#000000')
-          .text(eduText, margin, currentY, { width: contentWidth - 120 });
-
-        doc.font('Helvetica-Oblique')
-          .fontSize(9)
-          .fillColor('#555555')
-          .text(durationText, margin, currentY, { width: contentWidth, align: 'right' });
-
-        doc.y = currentY + Math.max(eduHeight, durationHeight);
-        doc.moveDown(0.3);
-      });
-    } else {
-      doc.font('Helvetica-Oblique').fontSize(9.5).fillColor('#555555').text('No education records available.');
-    }
-
-    // --- 6. LANGUAGES ---
-    // drawSectionHeader(doc, 'Languages', margin, contentWidth);
-    // doc.font('Helvetica').fontSize(9.5).fillColor('#222222')
-    //   .text('•  English (Professional Working Proficiency)', { indent: 8 })
-    //   .text('•  Hindi (Full Professional Proficiency)', { indent: 8 })
-    //   .text('•  Marathi (Native / Bilingual Proficiency)', { indent: 8 });
-
-    // // End PDF creation and send response stream
-    // doc.end();
-
-    drawSectionHeader(doc, 'Languages', margin, contentWidth);
-
-    doc.font('Helvetica').fontSize(9.5).fillColor('#222222')
-      .text(
-        '• English (Professional Working Proficiency)   • Hindi (Full Professional Proficiency)   • Marathi (Native / Bilingual Proficiency)',
-        {
-          width: contentWidth
+                doc.text(
+                  `• ${cleanDescription}`,
+                  {
+                    indent: 4,
+                    width: contentWidth,
+                    lineGap: 1.5
+                  }
+                );
+              }
+            });
+          }
+          doc.moveDown(0.5);
         }
       );
 
-    // End PDF creation and send response stream
+    } else {
+      doc.font('Calibri-Italic')
+        .fontSize(9.5)
+        .fillColor('#555555')
+        .text(
+          'No projects listed.'
+        );
+    }
+
+    // ============================================
+    // 5. EDUCATION
+    // ============================================
+    drawSectionHeader(
+      doc,
+      '5. Education',
+      margin,
+      contentWidth
+    );
+
+    if (educations && educations.length > 0) {
+      educations.forEach((edu) => {
+        if (doc.y > doc.page.height - 60) {
+          doc.addPage();
+        }
+
+        const currentY = doc.y;
+
+        const educationText = `${edu.title || ''}${edu.institution ? ` - ${edu.institution}` : ''}`;
+
+        const durationText = edu.duration || '';
+
+        // Calculate education height
+        doc.font('Calibri-Bold').fontSize(10);
+
+        const educationHeight =
+          doc.heightOfString(
+            educationText,
+            { width: contentWidth - 120 }
+          );
+
+        // Calculate duration height
+        doc.font('Calibri-Italic').fontSize(9);
+
+        const durationHeight =
+          doc.heightOfString(
+            durationText,
+            { width: 120 }
+          );
+
+        // EDUCATION TITLE
+        doc.font('Calibri-Bold')
+          .fontSize(10)
+          .fillColor('#000000')
+          .text(
+            educationText,
+            margin,
+            currentY,
+            { width: contentWidth - 120 }
+          );
+
+        // EDUCATION DURATION
+        doc.font('Calibri-Italic')
+          .fontSize(9)
+          .fillColor('#555555')
+          .text(
+            durationText,
+            margin,
+            currentY,
+            {
+              width: contentWidth,
+              align: 'right'
+            }
+          );
+
+        doc.y =
+          currentY +
+          Math.max(
+            educationHeight,
+            durationHeight
+          );
+
+        doc.moveDown(0.3);
+      });
+    } else {
+      doc.font('Calibri-Italic')
+        .fontSize(9.5)
+        .fillColor('#555555')
+        .text(
+          'No education records available.'
+        );
+    }
+
+    // ============================================
+    // 6. LANGUAGES
+    // ============================================
+    drawSectionHeader(
+      doc,
+      '6. Languages',
+      margin,
+      contentWidth
+    );
+
+
+    doc.font('Calibri')
+      .fontSize(9.5)
+      .fillColor('#222222')
+      .text(
+        '• English (Professional Working Proficiency)   • Hindi (Full Professional Proficiency)   • Marathi (Native / Bilingual Proficiency)',
+        {
+          width: contentWidth,
+          lineGap: 1.5
+        }
+      );
+
+    // ============================================
+    // FINISH PDF
+    // ============================================
     doc.end();
 
   } catch (error) {
-    console.error('Error generating ATS PDF resume:', error);
+
+    console.error(
+      'Error generating ATS PDF resume:',
+      error
+    );
+
     if (!res.headersSent) {
-      res.status(500).json({ success: false, message: 'Server error generating resume', error: error.message });
+      res.status(500).json({
+        success: false,
+        message:
+          'Server error generating resume',
+        error:
+          error.message
+      });
     }
   }
 };
