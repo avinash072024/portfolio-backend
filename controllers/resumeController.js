@@ -35,15 +35,6 @@ const drawSectionHeader = (doc, title, margin, contentWidth) => {
 // @route   GET /api/resumes/generate-ats
 const generateATSResume = async (req, res) => {
   try {
-    // const [contact, experiences, skills, projects, educations, services] = await Promise.all([
-    //   Contact.findOne(),
-    //   Experience.find().sort({ createdAt: -1 }),
-    //   Skill.find(),
-    //   Project.find().sort({ completedYear: -1, createdAt: -1 }),
-    //   Education.find().sort({ createdAt: -1 }),
-    //   Service.find()
-    // ]);
-
     const [contact, experiences, skills, projects, educations, services] = await Promise.all([
       Contact.findOne(),
       Experience.find(),
@@ -205,8 +196,9 @@ const generateATSResume = async (req, res) => {
 
     // --- 4. PROJECT ---
     drawSectionHeader(doc, 'Key Projects', margin, contentWidth);
-    if (projects && projects.length > 0) {
-      projects.forEach((proj) => {
+    const onResumeProjects = projects.filter(prj => prj.showOnResume);
+    if (onResumeProjects && onResumeProjects.length > 0) {
+      onResumeProjects.forEach((proj) => {
         if (doc.y > doc.page.height - 80) doc.addPage();
 
         const currentY = doc.y;
@@ -284,11 +276,24 @@ const generateATSResume = async (req, res) => {
     }
 
     // --- 6. LANGUAGES ---
+    // drawSectionHeader(doc, 'Languages', margin, contentWidth);
+    // doc.font('Helvetica').fontSize(9.5).fillColor('#222222')
+    //   .text('•  English (Professional Working Proficiency)', { indent: 8 })
+    //   .text('•  Hindi (Full Professional Proficiency)', { indent: 8 })
+    //   .text('•  Marathi (Native / Bilingual Proficiency)', { indent: 8 });
+
+    // // End PDF creation and send response stream
+    // doc.end();
+
     drawSectionHeader(doc, 'Languages', margin, contentWidth);
+
     doc.font('Helvetica').fontSize(9.5).fillColor('#222222')
-      .text('•  English (Professional Working Proficiency)', { indent: 8 })
-      .text('•  Hindi (Full Professional Proficiency)', { indent: 8 })
-      .text('•  Marathi (Native / Bilingual Proficiency)', { indent: 8 });
+      .text(
+        '• English (Professional Working Proficiency)   • Hindi (Full Professional Proficiency)   • Marathi (Native / Bilingual Proficiency)',
+        {
+          width: contentWidth
+        }
+      );
 
     // End PDF creation and send response stream
     doc.end();

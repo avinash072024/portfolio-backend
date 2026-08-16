@@ -11,19 +11,25 @@ const getProjects = async (req, res) => {
     const cached = cache.get(cacheKey);
     if (cached) return res.status(200).json(cached);
 
-    const { search, page: pageQuery, limit: limitQuery } = req.query;
+    const { search, showOnResume, page: pageQuery, limit: limitQuery } = req.query;
     const page = parseInt(pageQuery);
     const limit = parseInt(limitQuery);
 
     let query = {};
+    
+    // Search filter by title
     if (search) {
-      query = { title: { $regex: search, $options: 'i' } };
+      query.title = { $regex: search, $options: 'i' };
+    }
+
+    // Filter by showOnResume if explicitly provided in query params (e.g., ?showOnResume=true)
+    if (showOnResume !== undefined) {
+      query.showOnResume = showOnResume === 'true';
     }
 
     // If no pagination params → return all filtered
     if (!page || !limit) {
       const projects = await Project.find(query);
-      // const projects = await Project.find(query).sort({ completedYear: -1 });
       const resp = {
         success: true,
         count: projects.length,
@@ -84,11 +90,12 @@ const getProject = async (req, res) => {
 // @access  Private (assume public for now)
 const createProject = async (req, res) => {
   try {
+    // req.body will automatically capture showOnResume if sent from client
     const project = await Project.create(req.body);
-    // clear caches so list endpoints show newest data
+    
     cache.flush();
     emit('refresh-data', { resource: 'project', action: 'create', projectId: project._id });
-    res.status(201).json({ success: true, message: "Project created successfully" });
+    res.status(201).json({ success: true, message: "Project created successfully", project });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -105,15 +112,16 @@ const updateProject = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
 
+    // findByIdAndUpdate handles updates to showOnResume if provided in req.body
     const updatedProject = await Project.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     cache.flush();
     emit('refresh-data', { resource: 'project', action: 'update', projectId: updatedProject._id });
-    res.status(200).json({ success: true, message: "Project updated successfully" });
+    res.status(200).json({ success: true, message: "Project updated successfully", project: updatedProject });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }

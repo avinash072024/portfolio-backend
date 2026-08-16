@@ -35,6 +35,10 @@ const projectSchema = mongoose.Schema(
     link: {
       type: String,
     },
+    showOnResume: {
+      type: Boolean,
+      default: false
+    },
   },
   {
     timestamps: true,
