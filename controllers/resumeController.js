@@ -1101,7 +1101,7 @@ const generateATSResume = async (req, res) => {
     doc.moveDown(0.4);
 
     // 2. PROFESSIONAL EXPERIENCE
-    drawSectionHeader(doc, '2. Professional Experience', margin, contentWidth);
+    drawSectionHeader(doc, '2. Work Experience', margin, contentWidth);
     if (experiences && experiences.length > 0) {
       experiences.forEach((exp) => {
         if (doc.y > doc.page.height - 80) { doc.addPage(); }
@@ -1146,8 +1146,8 @@ const generateATSResume = async (req, res) => {
 
       Object.keys(skillGroups).forEach((category) => {
         if (doc.y > doc.page.height - 60) { doc.addPage(); }
-        doc.font('Calibri-Bold').fontSize(9.5).fillColor('#222222').text(`• ${category}: `, { continued: true, indent: 4 });
-        doc.font('Calibri').fontSize(9.5).fillColor('#222222').text(skillGroups[category].join(', '));
+        doc.font('Calibri-Bold').fontSize(9).fillColor('#222222').text(`• ${category}: `, { continued: true, indent: 4 });
+        doc.font('Calibri').fontSize(9).fillColor('#222222').text(skillGroups[category].join(', '));
         doc.moveDown(0.2);
       });
     } else {
