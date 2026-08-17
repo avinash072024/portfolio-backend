@@ -889,6 +889,57 @@ const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
 
+const CALIBRI_FONT_FILES = {
+  regular: 'calibri-regular.ttf',
+  bold: 'calibri-bold.ttf',
+  italic: 'calibri-italic.ttf',
+  boldItalic: 'calibri-bold-italic.ttf',
+};
+
+const CALIBRI_FONT_DIRS = [
+  path.join(__dirname, '../assets/fonts'),
+  path.join(process.cwd(), 'assets', 'fonts'),
+  path.join(process.cwd(), 'src', 'assets', 'fonts'),
+];
+
+const resolveFontPath = (fontDir, filename) => {
+  const exactPath = path.join(fontDir, filename);
+  if (fs.existsSync(exactPath)) {
+    return exactPath;
+  }
+
+  const matchedFile = fs.readdirSync(fontDir).find((file) => file.toLowerCase() === filename.toLowerCase());
+
+  return matchedFile ? path.join(fontDir, matchedFile) : null;
+};
+
+const registerCalibriFonts = (doc) => {
+  const fontDir = CALIBRI_FONT_DIRS.find((dir) => fs.existsSync(dir));
+
+  if (!fontDir) {
+    console.warn('Calibri font directory not found. Falling back to Helvetica.');
+    return false;
+  }
+
+  const regularPath = resolveFontPath(fontDir, CALIBRI_FONT_FILES.regular);
+  const boldPath = resolveFontPath(fontDir, CALIBRI_FONT_FILES.bold);
+  const italicPath = resolveFontPath(fontDir, CALIBRI_FONT_FILES.italic);
+  const boldItalicPath = resolveFontPath(fontDir, CALIBRI_FONT_FILES.boldItalic);
+
+  if (!regularPath || !boldPath) {
+    console.warn('Required Calibri font files not found in:', fontDir);
+    return false;
+  }
+
+  doc.registerFont('Calibri', regularPath);
+  doc.registerFont('Calibri-Bold', boldPath);
+  doc.registerFont('Calibri-Italic', italicPath || regularPath);
+  doc.registerFont('Calibri-BoldItalic', boldItalicPath || boldPath);
+
+  console.log('Calibri fonts loaded from:', fontDir);
+  return true;
+};
+
 const drawSectionHeader = (doc, title, margin, contentWidth) => {
   if (doc.y > doc.page.height - 70) {
     doc.addPage();
@@ -959,47 +1010,8 @@ const generateATSResume = async (req, res) => {
       }
     });
 
-    // ============================================
-    // ROBUST FONT LOADING FOR PRODUCTION
-    // ============================================
-    // Fixes Vercel/Render path issues by resolving from root working directory and checking existence
-    const possibleFontPaths = [
-      path.join(process.cwd(), 'src', 'assets', 'fonts'),
-      path.join(process.cwd(), 'assets', 'fonts'),
-      path.resolve(__dirname, '../assets/fonts')
-    ];
-
-    let fontDir = '';
-    for (const p of possibleFontPaths) {
-      if (fs.existsSync(p)) {
-        fontDir = p;
-        break;
-      }
-    }
-
-    let customFontsLoaded = false;
-    if (fontDir) {
-      try {
-        const regularPath = path.join(fontDir, 'Calibri-regular.ttf');
-        const boldPath = path.join(fontDir, 'Calibri-bold.ttf');
-        const italicPath = path.join(fontDir, 'Calibri-italic.ttf');
-        const boldItalicPath = path.join(fontDir, 'Calibri-bold-italic.ttf');
-
-        if (fs.existsSync(regularPath) && fs.existsSync(boldPath)) {
-          doc.registerFont('Calibri', fs.readFileSync(regularPath));
-          doc.registerFont('Calibri-Bold', fs.readFileSync(boldPath));
-          doc.registerFont('Calibri-Italic', fs.existsSync(italicPath) ? fs.readFileSync(italicPath) : fs.readFileSync(regularPath));
-          doc.registerFont('Calibri-BoldItalic', fs.existsSync(boldItalicPath) ? fs.readFileSync(boldItalicPath) : fs.readFileSync(boldPath));
-          customFontsLoaded = true;
-          console.log('Calibri custom fonts successfully loaded from:', fontDir);
-        }
-      } catch (err) {
-        console.warn('Error reading font files from disk:', err.message);
-      }
-    }
-
-    if (!customFontsLoaded) {
-      console.warn('Calibri font files not found in production environment. Falling back to Helvetica equivalents.');
+    // Load bundled Calibri TTF files (Linux production is case-sensitive).
+    if (!registerCalibriFonts(doc)) {
       doc.registerFont('Calibri', 'Helvetica');
       doc.registerFont('Calibri-Bold', 'Helvetica-Bold');
       doc.registerFont('Calibri-Italic', 'Helvetica-Oblique');
@@ -1052,7 +1064,8 @@ const generateATSResume = async (req, res) => {
 
       const links = [
         contact.linkedin ? `LinkedIn: ${contact.linkedin}` : '',
-        contact.github ? `GitHub: ${contact.github}` : ''
+        // contact.github ? `GitHub: ${contact.github}` : ''
+        `Website: https://avinash-modern-portfolio.netlify.app`
       ].filter(Boolean).join('  |  ');
 
       if (links) {
