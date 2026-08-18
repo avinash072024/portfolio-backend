@@ -26,9 +26,9 @@ const contactSchema = mongoose.Schema(
     github: {
       type: String,
     },
-    twitter: {
-      type: String,
-    },
+    // twitter: {
+    //   type: String,
+    // },
     instagram: {
       type: String,
     },
@@ -38,7 +38,7 @@ const contactSchema = mongoose.Schema(
     whatsapp: {
       type: String,
     },
-    resumeUrl: {
+    portfolioURL: {
       type: String,
     },
   },

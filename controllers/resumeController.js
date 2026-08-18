@@ -183,8 +183,7 @@ const generateATSResume = async (req, res) => {
 
       const links = [
         contact.linkedin ? `LinkedIn: ${contact.linkedin}` : '',
-        // contact.github ? `GitHub: ${contact.github}` : ''
-        `Website: https://avinash-modern-portfolio.netlify.app`
+        contact.github ? `Website: ${contact.portfolioURL}` : ''
       ].filter(Boolean).join('  |  ');
 
       if (links) {
